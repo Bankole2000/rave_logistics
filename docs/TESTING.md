@@ -21,6 +21,7 @@ Test data: isolated per environment; synthetic only.
 ## Acceptance tests
 | ID | Requirement | Features | Apps | Scenario | Expected result |
 |---|---|---|---|---|---|
+| TC-000 | M0 | — | all | Fresh clone: follow the README setup, run the "All apps" checks and start every app | Every check passes; each client shows live data from the server. A human checks each client in a browser or the app, including the browser console |
 | TC-001 | FR-001 | FT-001 | {{web, api}} | {{Action and preconditions}} | {{Observable result}} |
 
 A feature's outcome (FEATURES.md) is the starting point for its expected result. Each journey (J-) gets at least one end-to-end test that walks its features in order. Cover failure cases, validation, authorization and critical user journeys. Use synthetic data; never production secrets or personal data. A journey that crosses apps is tested end to end at least once.
@@ -38,3 +39,6 @@ See the README [Commands](../README.md#commands) section. Record here only how a
 
 ## Release acceptance
 {{Per app: critical journeys, security checks, performance targets, supported browsers/devices/OS versions, known limitations, human sign-off}}
+
+## Approval
+{{Human approver, revision, date}}

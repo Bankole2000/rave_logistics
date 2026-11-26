@@ -28,3 +28,10 @@ Podfile.lock linguist-generated=true
 *.aab binary
 *.apk binary
 *.ipa binary
+
+# Generated files (fill in when M0 creates them): GitHub folds them in pull request
+# diffs and leaves them out of language statistics. Keep diffing contracts that people
+# review, such as an OpenAPI spec (drop -diff for those).
+# <lockfile, e.g. Cargo.lock> linguist-generated=true -diff
+# <generated contract, e.g. openapi/openapi.json> linguist-generated=true
+# <generated client code, e.g. packages/api-client/src/generated/**> linguist-generated=true

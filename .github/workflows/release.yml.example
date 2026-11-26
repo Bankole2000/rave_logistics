@@ -3,7 +3,8 @@
 #
 # How it works:
 # - A human pushes a tag `<app>-vX.Y.Z` (see docs/DEPLOYMENT.md, Release checklist).
-#   "resolve" reads the app name from the tag; only that app's jobs run.
+#   "resolve" reads the app name from the tag; only that app's jobs run. Published
+#   libraries in sdks/ get their own names the same way (e.g. `sdk-ts-v1.2.0`).
 # - Each app's job uses a GitHub deployment environment (Settings → Environments),
 #   e.g. "release-web". Put that app's deploy credentials and signing material in the
 #   environment's secrets, and set "Required reviewers" to the release owner, so the
