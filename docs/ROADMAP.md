@@ -1,6 +1,6 @@
 # Development Roadmap
 
-Status: Draft | Owner: @bankole2000 | Version: 0.2 | Last updated: 2026-11-26
+Status: Draft | Owner: @bankole2000 | Version: 0.3 | Last updated: 2026-11-26
 References: FEATURES.md, PRD.md, DESIGN.md, TECHNICAL.md, TESTING.md
 
 ## Milestones
@@ -23,6 +23,7 @@ Managing milestones: a milestone is the set of journeys in its Journeys column. 
 ### M0 checklist
 Every project with a client and a server needs these in M0; drop the ones that don't apply.
 - [ ] Workspaces and toolchain versions pinned (ADR-001); apps and packages created from `templates/`.
+- [ ] Tauri mobile spike (ADR-005). On a real Android and a real iOS device, drivers-app must send its location every `LOCATION_INTERVAL_SECONDS` for 30 minutes while backgrounded and locked, and receive a push notification from api while closed. Record the result in ADR-005; if it fails, drivers-app switches to Capacitor.
 - [ ] Each server answers a health check that includes its database, with request IDs and the standard error body.
 - [ ] Local defaults (TECHNICAL.md, Local development): uncommon ports, `127.0.0.1`, trust-auth database in `docker-compose.yml`, a gitignored `docker-compose.override.yml` for personal services.
 - [ ] Each app's `.env.example` documents every variable; clients get the server URL from public configuration.
