@@ -300,11 +300,14 @@ if [ -n "$DO_RULESET" ]; then
       [ -n "$KEEP" ] && APPROVALS="$KEEP"
     fi
   fi
+  # Keep whoever may bypass an existing ruleset (e.g. the owner); a new one has no bypass list.
+  BYPASS="[]"
+  [ -z "$ID" ] || BYPASS=$(gh_retry api "repos/$REPO/rulesets/$ID" --jq '.bypass_actors // [] | tojson')
   CHECK_RULE=""
   if [ -n "$REQUIRED_CHECK" ]; then
     CHECK_RULE=$(printf ',{"type":"required_status_checks","parameters":{"strict_required_status_checks_policy":false,"required_status_checks":[{"context":"%s"}]}}' "$REQUIRED_CHECK")
   fi
-  BODY=$(printf '{"name":"main-guard","target":"branch","enforcement":"active","conditions":{"ref_name":{"include":["refs/heads/%s"],"exclude":[]}},"rules":[{"type":"deletion"},{"type":"non_fast_forward"},{"type":"pull_request","parameters":{"required_approving_review_count":%s,"dismiss_stale_reviews_on_push":false,"require_code_owner_review":false,"require_last_push_approval":false,"required_review_thread_resolution":false}}%s]}' "$BRANCH" "$APPROVALS" "$CHECK_RULE")
+  BODY=$(printf '{"name":"main-guard","target":"branch","enforcement":"active","bypass_actors":%s,"conditions":{"ref_name":{"include":["refs/heads/%s"],"exclude":[]}},"rules":[{"type":"deletion"},{"type":"non_fast_forward"},{"type":"pull_request","parameters":{"required_approving_review_count":%s,"dismiss_stale_reviews_on_push":false,"require_code_owner_review":false,"require_last_push_approval":false,"required_review_thread_resolution":false}}%s]}' "$BYPASS" "$BRANCH" "$APPROVALS" "$CHECK_RULE")
   WHAT="ruleset main-guard on $BRANCH ($APPROVALS approvals${REQUIRED_CHECK:+, requires $REQUIRED_CHECK})"
   if [ -n "$ID" ]; then
     [ -n "$DRY" ] || gh_retry api -X PUT "repos/$REPO/rulesets/$ID" --input - <<< "$BODY" >/dev/null
