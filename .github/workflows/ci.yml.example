@@ -70,6 +70,9 @@ jobs:
               - 'pnpm-workspace.yaml'
               - 'package-lock.json'
               - 'turbo.json'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'rust-toolchain.toml'
               - '.github/workflows/ci.yml'
             customer-web:
               - *shared
@@ -203,23 +206,35 @@ jobs:
     needs: changes
     if: needs.changes.outputs['api'] == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     # A database for integration tests, with trust authentication so no password sits
-    # in the repository (it only listens inside the runner):
-    # services:
-    #   postgres:
-    #     image: postgres:17
-    #     env:
-    #       POSTGRES_HOST_AUTH_METHOD: trust
-    #     ports: ['127.0.0.1:5432:5432']
-    #     options: --health-cmd pg_isready --health-interval 5s --health-retries 10
+    # in the repository (it only listens inside the runner). Same image as docker-compose.yml.
+    services:
+      postgres:
+        image: postgis/postgis:18-3.6
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: rave
+        ports: ['127.0.0.1:15432:5432']
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres@127.0.0.1:15432/rave
+      CARGO_TERM_COLOR: always
     steps:
       - uses: actions/checkout@v7
-      # Install, lint, typecheck, tests and build for api (README Commands, "api").
-      - name: Fail until configured
+      # Installs the toolchain pinned in rust-toolchain.toml (README Commands, "api").
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - name: Lint
         run: |
-          echo "Replace with the api install, lint, typecheck, test and build commands."
-          exit 1
+          cargo fmt --all -- --check
+          cargo clippy -p api --all-targets -- -D warnings
+      - name: Test
+        run: cargo test -p api
+      - name: Contract is up to date
+        run: cargo run -p api --bin openapi -- --out packages/api-contract/openapi.json --check
+      - name: Build
+        run: cargo build -p api --release
 
   worker:
     needs: changes
