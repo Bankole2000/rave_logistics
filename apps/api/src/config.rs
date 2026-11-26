@@ -46,7 +46,7 @@ impl Config {
         let or = |key: &str, default: &str| get(key).unwrap_or_else(|| default.to_owned());
 
         Ok(Self {
-            bind_addr: or("API_BIND_ADDR", "127.0.0.1:18080")
+            bind_addr: or("API_BIND_ADDR", "127.0.0.1:18082")
                 .parse()
                 .context("API_BIND_ADDR must be host:port")?,
             database_url: get("DATABASE_URL").context("DATABASE_URL is required")?,
@@ -90,7 +90,7 @@ mod tests {
     #[test]
     fn defaults_apply_when_only_database_url_is_set() {
         let config = Config::from_lookup(lookup(&[("DATABASE_URL", "postgres://x")])).unwrap();
-        assert_eq!(config.bind_addr.to_string(), "127.0.0.1:18080");
+        assert_eq!(config.bind_addr.to_string(), "127.0.0.1:18082");
         assert_eq!(config.db_max_connections, 10);
         assert_eq!(config.log_format, LogFormat::Pretty);
         assert!(config.migrate_on_start);

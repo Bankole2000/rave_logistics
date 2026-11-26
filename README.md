@@ -123,8 +123,8 @@ This section is the single source of truth for project commands. Other documents
 - Build: {{command}}
 
 ### api
-Run from the repo root. First time: `docker compose up -d` (local PostgreSQL with PostGIS on 127.0.0.1:15432) and `cp apps/api/.env.example apps/api/.env`.
-- Run locally: `cargo run -p api` (listens on http://127.0.0.1:18080; try `GET /health`)
+Run from the repo root. First time: `docker compose up -d` (local PostgreSQL with PostGIS on 127.0.0.1:15482) and `cp apps/api/.env.example apps/api/.env`.
+- Run locally: `cargo run -p api` (listens on http://127.0.0.1:18082; try `GET /health`)
 - Test: `cargo test -p api` (needs the local database)
 - Lint: `cargo fmt --all -- --check` and `cargo clippy -p api --all-targets -- -D warnings`
 - Typecheck: N/A (covered by the build)

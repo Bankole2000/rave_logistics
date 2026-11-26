@@ -12,7 +12,7 @@ services:
       POSTGRES_DB: rave
       POSTGRES_HOST_AUTH_METHOD: trust
     ports:
-      - "127.0.0.1:15432:5432"
+      - "127.0.0.1:15482:5432"
     volumes:
       # PostgreSQL 18 images keep data under /var/lib/postgresql/<major>/.
       - postgres-data:/var/lib/postgresql
