@@ -14,7 +14,7 @@ This file is the list of everything the product lets someone do. It is drafted f
 6. **IDs are stable:** never renumber or reuse them. Mark removed items `out-of-scope` instead of deleting them.
 7. **Only humans approve.** Agents add new ideas as `proposed` and never change a status.
 8. **Adding features:** open this file in `tools/doc-reviewer.html` and use "+ Add". "Build from lists" picks the user, action, resource, surfaces and journey from dropdowns ("+ New" adds a list item on the spot); "Describe in words" takes a sentence that an agent turns into a row.
-9. **Generated columns:** the Requirements column and the coverage matrix are written by `node scripts/check-features.mjs --write` from the PRD and the Features table. Don't edit them by hand; CI fails when they are out of date.
+9. **Generated columns:** the Requirements column (from the PRD), the journeys' Milestone column (from ROADMAP.md) and the coverage matrix are written by `node scripts/check-features.mjs --write`. Don't edit them by hand; CI fails when they are out of date.
 
 ## Users
 Kinds: `person`, `app` (another program using the product), `agent` (a script or AI agent acting for someone) or `system` (the product itself: checks, calculations, scheduled jobs).
@@ -59,7 +59,7 @@ Where a feature is offered: one row per app in `apps/` (from the project setup),
 | S-02 | {{Surface, e.g. Public api}} | apps/{{api}} | {{Who uses it and where}} | Must |
 
 ## Journeys
-A journey is what one user does to reach a goal, as features in order. Milestone is set by ROADMAP.md and changes only through a ROADMAP change.
+A journey is what one user does to reach a goal, as features in order. The Milestone column is generated from ROADMAP.md, where each milestone lists the journeys it delivers.
 
 | ID | Name | Main user | Goal | Features, in order | Milestone |
 |---|---|---|---|---|---|

@@ -12,8 +12,9 @@
 #   --all                 Every step below except --required-check
 #   --labels              Labels; with no Project, also the status:*, human:* and ai:ready
 #                         labels that stand in for Project fields (docs/GITHUB.md)
-#   --milestones          Milestones from the Milestones table in docs/ROADMAP.md (rows
-#                         that still hold placeholders are skipped)
+#   --milestones          Milestones from the Milestones table in docs/ROADMAP.md, with
+#                         their outcome and journeys as the description (rows that still
+#                         hold placeholders are skipped; descriptions are kept in step)
 #   --ruleset             "main-guard" ruleset on the default branch: no deletion, no
 #                         force-push, pull requests with --approvals approvals
 #   --remove-default-labels  Delete GitHub's default labels (bug, enhancement, …) that no
@@ -248,26 +249,53 @@ if [ -n "$DO_REMOVE_DEFAULTS" ]; then
   done
 fi
 
-# --- Milestones: the first column of the Milestones table in docs/ROADMAP.md ---
+# --- Milestones: the Milestones table in docs/ROADMAP.md ---
+# Each milestone's description is its outcome plus the journeys it delivers (Journeys
+# column), named from docs/FEATURES.md, so the GitHub milestone page shows what it covers.
 if [ -n "$DO_MILESTONES" ]; then
-  MILESTONES=()
-  while IFS= read -r m; do
-    if [[ "$m" == *\{\{* ]]; then MANUAL+=("Milestone not created, its name is still a placeholder: $m"); continue; fi
-    MILESTONES+=("$m")
-  done < <(awk '
-    /^## /{ inside = ($0 ~ /^## Milestones/) }
-    inside && /^\|/ { split($0, c, "|"); gsub(/^[ \t]+|[ \t]+$/, "", c[2]); if (c[2] ~ /^M[0-9]+ - /) print c[2] }
+  # title<TAB>outcome<TAB>journeys, one line per milestone row.
+  MS_ROWS=$(awk -F'|' '
+    /^## /{ inside = ($0 ~ /^## Milestones/); header = 0; next }
+    !inside || !/^\|/ { next }
+    !header { for (i = 2; i < NF; i++) { h = $i; gsub(/^[ \t]+|[ \t]+$/, "", h); col[h] = i } header = 1; next }
+    { t = $2; gsub(/^[ \t]+|[ \t]+$/, "", t); if (t !~ /^M[0-9]+ - /) next
+      o = ("Outcome" in col) ? $(col["Outcome"]) : ""; j = ("Journeys" in col) ? $(col["Journeys"]) : ""
+      gsub(/^[ \t]+|[ \t]+$/, "", o); gsub(/^[ \t]+|[ \t]+$/, "", j)
+      print t "\t" o "\t" j }
   ' docs/ROADMAP.md)
-  [ ${#MILESTONES[@]} -gt 0 ] || MANUAL+=("No milestones found in docs/ROADMAP.md")
-  HAVE_MS=$(gh_retry api "repos/$REPO/milestones?state=all&per_page=100" --paginate --jq '.[].title')
-  for title in ${MILESTONES[@]+"${MILESTONES[@]}"}; do
-    if grep -qxF "$title" <<< "$HAVE_MS"; then
-      SKIPPED+=("milestone $title")
-    else
-      change api -X POST "repos/$REPO/milestones" -f title="$title"
-      CREATED+=("milestone $title")
+  # J-01<TAB>Name, from the Journeys table in docs/FEATURES.md.
+  JOURNEY_NAMES=""
+  [ -f docs/FEATURES.md ] && JOURNEY_NAMES=$(awk -F'|' '
+    /^## /{ inside = ($0 ~ /^## Journeys/); next }
+    inside && /^\| J-[0-9]+ / { id = $2; n = $3; gsub(/^[ \t]+|[ \t]+$/, "", id); gsub(/^[ \t]+|[ \t]+$/, "", n); print id "\t" n }
+  ' docs/FEATURES.md)
+  journey_name() { awk -F'\t' -v id="$1" '$1 == id { print $2; exit }' <<< "$JOURNEY_NAMES"; }
+
+  [ -n "$MS_ROWS" ] || MANUAL+=("No milestones found in docs/ROADMAP.md")
+  HAVE_MS=$(gh_retry api "repos/$REPO/milestones?state=all&per_page=100" --paginate --jq '.[] | "\(.number)\t\(.title)\t\(.description // "")"')
+  while IFS=$'\t' read -r title outcome journeys; do
+    [ -n "$title" ] || continue
+    if [[ "$title" == *\{\{* ]]; then MANUAL+=("Milestone not created, its name is still a placeholder: $title"); continue; fi
+    desc="$outcome"
+    [[ "$desc" == *\{\{* || "$desc" == "—" ]] && desc=""
+    if [[ -n "$journeys" && "$journeys" != *\{\{* && "$journeys" != "—" ]]; then
+      list=""
+      for id in $(grep -oE 'J-[0-9]+' <<< "$journeys"); do
+        n=$(journey_name "$id"); list="${list:+$list, }$id${n:+ $n}"
+      done
+      [ -n "$list" ] && desc="${desc:+$desc. }Journeys: $list."
     fi
-  done
+    existing=$(awk -F'\t' -v t="$title" '$2 == t { print; exit }' <<< "$HAVE_MS")
+    if [ -z "$existing" ]; then
+      change api -X POST "repos/$REPO/milestones" -f title="$title" -f description="$desc"
+      CREATED+=("milestone $title")
+    elif [ "$(cut -f3- <<< "$existing")" != "$desc" ]; then
+      change api -X PATCH "repos/$REPO/milestones/$(cut -f1 <<< "$existing")" -f description="$desc"
+      UPDATED+=("milestone $title (description: ${desc:-empty})")
+    else
+      SKIPPED+=("milestone $title")
+    fi
+  done <<< "$MS_ROWS"
 fi
 
 # --- Project fields ---

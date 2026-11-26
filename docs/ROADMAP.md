@@ -8,6 +8,8 @@ This table is the source of truth for milestone names; GitHub milestones must ma
 
 M0 (foundation) comes first and the launch milestone last. The milestones in between are slices of the journeys in FEATURES.md: each one delivers whole journeys end to end, so it ends with something a user can try. Cut them from the approved features by priority (Must first) and by "Depends on", then name each one for what a user can do when it is done.
 
+Managing milestones: a milestone is the set of journeys in its Journeys column. To add, split or move one, edit this table (a journey belongs to at most one milestone), then run `node scripts/check-features.mjs --write`. It updates the journeys' Milestone column in FEATURES.md, fails if a feature depends on one in a later milestone, and prints what each milestone delivers. Then `bash scripts/setup-github.sh --milestones` creates new milestones on GitHub and keeps their descriptions (outcome and journeys) in step. A journey too large for one milestone is split into two journeys in FEATURES.md first.
+
 | Milestone | Outcome | Journeys | Exit criteria |
 |---|---|---|---|
 | M0 - Foundation | Runnable skeleton of every app | — | The M0 checklist below is done; TC-000 passes on a fresh clone |
