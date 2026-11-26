@@ -43,9 +43,18 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      web: ${{ steps.filter.outputs.web }}
-      api: ${{ steps.filter.outputs.api }}
-      mobile: ${{ steps.filter.outputs.mobile }}
+      customer-web: ${{ steps.filter.outputs['customer-web'] }}
+      customer-app: ${{ steps.filter.outputs['customer-app'] }}
+      drivers-web: ${{ steps.filter.outputs['drivers-web'] }}
+      drivers-app: ${{ steps.filter.outputs['drivers-app'] }}
+      admin-app: ${{ steps.filter.outputs['admin-app'] }}
+      admin-web: ${{ steps.filter.outputs['admin-web'] }}
+      api: ${{ steps.filter.outputs['api'] }}
+      worker: ${{ steps.filter.outputs['worker'] }}
+      vendor-web: ${{ steps.filter.outputs['vendor-web'] }}
+      vendor-app: ${{ steps.filter.outputs['vendor-app'] }}
+      partners-api: ${{ steps.filter.outputs['partners-api'] }}
+      mcp-server: ${{ steps.filter.outputs['mcp-server'] }}
       infra: ${{ steps.filter.outputs.infra }}
     steps:
       - uses: actions/checkout@v7
@@ -62,15 +71,42 @@ jobs:
               - 'package-lock.json'
               - 'turbo.json'
               - '.github/workflows/ci.yml'
-            web:
+            customer-web:
               - *shared
-              - 'apps/web/**'
+              - 'apps/customer-web/**'
+            customer-app:
+              - *shared
+              - 'apps/customer-app/**'
+            drivers-web:
+              - *shared
+              - 'apps/drivers-web/**'
+            drivers-app:
+              - *shared
+              - 'apps/drivers-app/**'
+            admin-app:
+              - *shared
+              - 'apps/admin-app/**'
+            admin-web:
+              - *shared
+              - 'apps/admin-web/**'
             api:
               - *shared
               - 'apps/api/**'
-            mobile:
+            worker:
               - *shared
-              - 'apps/mobile/**'
+              - 'apps/worker/**'
+            vendor-web:
+              - *shared
+              - 'apps/vendor-web/**'
+            vendor-app:
+              - *shared
+              - 'apps/vendor-app/**'
+            partners-api:
+              - *shared
+              - 'apps/partners-api/**'
+            mcp-server:
+              - *shared
+              - 'apps/mcp-server/**'
             infra:
               - 'infra/**'
 
@@ -85,31 +121,87 @@ jobs:
       - name: Check features (FEATURES.md references, PRD links, generated parts)
         run: node scripts/check-features.mjs
 
-  web:
+  customer-web:
     needs: changes
-    if: needs.changes.outputs.web == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.changes.outputs['customer-web'] == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      # Node.js example — adjust or replace:
-      # - uses: actions/setup-node@v7
-      #   with:
-      #     node-version-file: .nvmrc
-      #     cache: pnpm
-      # - run: pnpm install --frozen-lockfile
-      # - run: pnpm --filter web lint
-      # - run: pnpm --filter web typecheck
-      # - run: pnpm --filter web test
-      # - run: pnpm --filter web build
+      # Install, lint, typecheck, unit tests and build for customer-web (README Commands, "customer-web").
       - name: Fail until configured
         run: |
-          echo "Replace with the web app's install, lint, test and build commands."
+          echo "Replace with the customer-web app's install, lint, typecheck, test and build commands."
+          exit 1
+
+  customer-app:
+    needs: changes
+    if: needs.changes.outputs['customer-app'] == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest   # Keep on Linux; signed iOS builds run in release.yml
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      # Lint, typecheck and unit tests only (README Commands, "customer-app").
+      - name: Fail until configured
+        run: |
+          echo "Replace with the customer-app install, lint and test commands."
+          exit 1
+
+  drivers-web:
+    needs: changes
+    if: needs.changes.outputs['drivers-web'] == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      # Install, lint, typecheck, unit tests and build for drivers-web (README Commands, "drivers-web").
+      - name: Fail until configured
+        run: |
+          echo "Replace with the drivers-web app's install, lint, typecheck, test and build commands."
+          exit 1
+
+  drivers-app:
+    needs: changes
+    if: needs.changes.outputs['drivers-app'] == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest   # Keep on Linux; signed iOS builds run in release.yml
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      # Lint, typecheck and unit tests only (README Commands, "drivers-app").
+      - name: Fail until configured
+        run: |
+          echo "Replace with the drivers-app install, lint and test commands."
+          exit 1
+
+  admin-app:
+    needs: changes
+    if: needs.changes.outputs['admin-app'] == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest   # Keep on Linux; signed iOS and macOS builds run in release.yml
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      # Lint, typecheck and unit tests only (README Commands, "admin-app").
+      - name: Fail until configured
+        run: |
+          echo "Replace with the admin-app install, lint and test commands."
+          exit 1
+
+  admin-web:
+    needs: changes
+    if: needs.changes.outputs['admin-web'] == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      # Install, lint, typecheck, unit tests and build for admin-web (README Commands, "admin-web").
+      - name: Fail until configured
+        run: |
+          echo "Replace with the admin-web app's install, lint, typecheck, test and build commands."
           exit 1
 
   api:
     needs: changes
-    if: needs.changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.changes.outputs['api'] == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # A database for integration tests, with trust authentication so no password sits
@@ -123,30 +215,84 @@ jobs:
     #     options: --health-cmd pg_isready --health-interval 5s --health-retries 10
     steps:
       - uses: actions/checkout@v7
-      # Python example — adjust or replace:
-      # - uses: actions/setup-python@v7
-      #   with:
-      #     python-version-file: apps/api/.python-version
-      #     cache: pip
-      # - run: pip install -r apps/api/requirements.txt
-      # - run: ruff check apps/api
-      # - run: pytest apps/api
+      # Install, lint, typecheck, tests and build for api (README Commands, "api").
       - name: Fail until configured
         run: |
-          echo "Replace with the API's install, lint, test and build commands."
+          echo "Replace with the api install, lint, typecheck, test and build commands."
           exit 1
 
-  mobile:
+  worker:
     needs: changes
-    if: needs.changes.outputs.mobile == 'true' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest   # Keep on Linux; signed iOS/macOS builds run in release.yml
+    if: needs.changes.outputs['worker'] == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # A database for integration tests, with trust authentication so no password sits
+    # in the repository (it only listens inside the runner):
+    # services:
+    #   postgres:
+    #     image: postgres:17
+    #     env:
+    #       POSTGRES_HOST_AUTH_METHOD: trust
+    #     ports: ['127.0.0.1:5432:5432']
+    #     options: --health-cmd pg_isready --health-interval 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      # Install, lint, typecheck, tests and build for worker (README Commands, "worker").
+      - name: Fail until configured
+        run: |
+          echo "Replace with the worker install, lint, typecheck, test and build commands."
+          exit 1
+
+  vendor-web:
+    needs: changes
+    if: needs.changes.outputs['vendor-web'] == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      # Install, lint, typecheck, unit tests and build for vendor-web (README Commands, "vendor-web").
+      - name: Fail until configured
+        run: |
+          echo "Replace with the vendor-web app's install, lint, typecheck, test and build commands."
+          exit 1
+
+  vendor-app:
+    needs: changes
+    if: needs.changes.outputs['vendor-app'] == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest   # Keep on Linux; signed iOS and macOS builds run in release.yml
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
-      # Lint, typecheck and unit tests only. Desktop apps follow the same pattern.
+      # Lint, typecheck and unit tests only (README Commands, "vendor-app").
       - name: Fail until configured
         run: |
-          echo "Replace with the mobile app's install, lint and test commands."
+          echo "Replace with the vendor-app install, lint and test commands."
+          exit 1
+
+  partners-api:
+    needs: changes
+    if: needs.changes.outputs['partners-api'] == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      # Install, lint, typecheck, tests and build for partners-api (README Commands, "partners-api").
+      - name: Fail until configured
+        run: |
+          echo "Replace with the partners-api install, lint, typecheck, test and build commands."
+          exit 1
+
+  mcp-server:
+    needs: changes
+    if: needs.changes.outputs['mcp-server'] == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      # Install, lint, typecheck, tests and build for mcp-server (README Commands, "mcp-server").
+      - name: Fail until configured
+        run: |
+          echo "Replace with the mcp-server install, lint, typecheck, test and build commands."
           exit 1
 
   infra:
@@ -166,7 +312,7 @@ jobs:
 
   ci-ok:
     if: always()
-    needs: [changes, repo, web, api, mobile, infra]
+    needs: [changes, repo, customer-web, customer-app, drivers-web, drivers-app, admin-app, admin-web, api, worker, vendor-web, vendor-app, partners-api, mcp-server, infra]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
