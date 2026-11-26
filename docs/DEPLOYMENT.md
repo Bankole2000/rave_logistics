@@ -1,6 +1,6 @@
 # Deployment and Operations
 
-Status: Draft | Owner: {{owner}} | Version: 0.1 | Last updated: {{YYYY-MM-DD}}
+Status: Draft | Owner: @bankole2000 | Version: 0.2 | Last updated: 2026-11-26
 References: TECHNICAL.md, TESTING.md
 
 ## Environments and infrastructure
@@ -18,10 +18,18 @@ Infrastructure is defined in `infra/` (see TECHNICAL.md, Infrastructure). Change
 ### Where each app runs
 | App | Staging | Production | Release trigger |
 |---|---|---|---|
-| {{web}} | {{host/URL}} | {{host/URL}} | {{e.g. tag web-v* → release workflow → environment approval}} |
-| {{api}} | {{host/URL}} | {{host/URL}} | {{trigger}} |
-| {{mobile}} | {{TestFlight / internal testing track}} | {{App Store / Google Play}} | {{tag → signed build → manual store submission}} |
-| {{desktop}} | {{internal update channel}} | {{download site / Microsoft Store / Mac App Store}} | {{tag → signed build → publish to update channel}} |
+| customer-web | {{host/URL}} | {{host/URL}} | tag `customer-web-v*` → release workflow → environment approval |
+| customer-app | {{TestFlight / internal testing track}} | {{App Store / Google Play}} | tag `customer-app-v*` → signed build → manual store submission |
+| drivers-web | {{host/URL}} | {{host/URL}} | tag `drivers-web-v*` → release workflow → environment approval |
+| drivers-app | {{TestFlight / internal testing track}} | {{App Store / Google Play}} | tag `drivers-app-v*` → signed build → manual store submission |
+| admin-app | {{TestFlight / internal testing track; internal desktop update channel}} | {{App Store / Google Play; desktop download site or store}} | tag `admin-app-v*` → signed builds → store submission and desktop update channel |
+| admin-web | {{host/URL}} | {{host/URL}} | tag `admin-web-v*` → release workflow → environment approval |
+| api | {{host/URL}} | {{host/URL}} | tag `api-v*` → release workflow → environment approval |
+| worker | {{host/URL}} | {{host/URL}} | tag `worker-v*` → release workflow → environment approval |
+| vendor-web | {{host/URL}} | {{host/URL}} | tag `vendor-web-v*` → release workflow → environment approval |
+| vendor-app | {{TestFlight / internal testing track; internal desktop update channel}} | {{App Store / Google Play; desktop download site or store}} | tag `vendor-app-v*` → signed builds → store submission and desktop update channel |
+| partners-api | {{host/URL}} | {{host/URL}} | tag `partners-api-v*` → release workflow → environment approval |
+| mcp-server | {{host/URL}} | {{host/URL}} | tag `mcp-server-v*` → release workflow → environment approval |
 
 ## Configuration
 {{Required variable names per app (see apps/<app>/.env.example), secret store, access controls; never actual secrets. Client apps receive only public values at build time.}}
@@ -80,4 +88,4 @@ Remove this section if there is no desktop app.
 {{Contact, severity, containment, recovery, communication and follow-up}}
 
 ## Approval
-{{Authorized release owner per app; no autonomous production deployment, infrastructure apply, store submission or desktop publish}}
+Release owner for every app: @bankole2000. No autonomous production deployment, infrastructure apply, store submission or desktop publish.

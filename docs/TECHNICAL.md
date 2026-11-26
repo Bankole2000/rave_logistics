@@ -1,6 +1,6 @@
 # Technical Specification
 
-Status: Draft | Owner: {{owner}} | Version: 0.1 | Last updated: {{YYYY-MM-DD}}
+Status: Draft | Owner: @bankole2000 | Version: 0.2 | Last updated: 2026-11-26
 References: FEATURES.md, PRD.md, DESIGN.md
 
 ## Architecture overview
@@ -11,10 +11,18 @@ One row per deployable app in `apps/`, per shared package in `packages/`, and fo
 
 | Component | Path | Kind | Stack and version | Deploys to | Owner | Requirements |
 |---|---|---|---|---|---|---|
-| {{web}} | apps/{{web}} | {{Web client}} | {{e.g. framework, language and version}} | {{hosting}} | {{owner}} | {{FR IDs}} |
-| {{api}} | apps/{{api}} | {{Server/API}} | {{stack}} | {{hosting}} | {{owner}} | {{FR IDs}} |
-| {{mobile}} | apps/{{mobile}} | {{Mobile client}} | {{stack; minimum OS versions}} | {{App Store / Google Play}} | {{owner}} | {{FR IDs}} |
-| {{api-contract}} | packages/{{api-contract}} | Shared package | {{types / OpenAPI / schema tooling}} | Not deployed | {{owner}} | — |
+| customer-web | apps/customer-web | Web client | {{stack}} | {{hosting}} | @bankole2000 | {{FR IDs}} |
+| customer-app | apps/customer-app | Mobile client | {{stack; minimum OS versions}} | {{App Store / Google Play}} | @bankole2000 | {{FR IDs}} |
+| drivers-web | apps/drivers-web | Web client | {{stack}} | {{hosting}} | @bankole2000 | {{FR IDs}} |
+| drivers-app | apps/drivers-app | Mobile client | {{stack; minimum OS versions}} | {{App Store / Google Play}} | @bankole2000 | {{FR IDs}} |
+| admin-app | apps/admin-app | Mobile client, Desktop client | {{stack; minimum OS versions}} | {{App Store / Google Play; desktop download or store}} | @bankole2000 | {{FR IDs}} |
+| admin-web | apps/admin-web | Web client | {{stack}} | {{hosting}} | @bankole2000 | {{FR IDs}} |
+| api | apps/api | Server/API | {{stack}} | {{hosting}} | @bankole2000 | {{FR IDs}} |
+| worker | apps/worker | Worker | {{stack}} | {{hosting}} | @bankole2000 | {{FR IDs}} |
+| vendor-web | apps/vendor-web | Web client | {{stack}} | {{hosting}} | @bankole2000 | {{FR IDs}} |
+| vendor-app | apps/vendor-app | Mobile client, Desktop client | {{stack; minimum OS versions}} | {{App Store / Google Play; desktop download or store}} | @bankole2000 | {{FR IDs}} |
+| partners-api | apps/partners-api | Server/API | {{stack}} | {{hosting}} | @bankole2000 | {{FR IDs}} |
+| mcp-server | apps/mcp-server | Server/API | {{stack}} | {{hosting}} | @bankole2000 | {{FR IDs}} |
 | infra | infra/ | Infrastructure | {{IaC tool, see ADR-002}} | {{cloud accounts / environments}} | {{owner}} | — |
 
 ## Local development
@@ -55,9 +63,10 @@ Every server app has a contract package. List every consumer, including other se
 
 | Provider | Contract | Consumers | Consumer auth | Compatibility rule |
 |---|---|---|---|---|
-| {{api}} | packages/{{api-contract}} | {{e.g. web, admin, android, ios, desktop}} | {{user sessions/tokens}} | {{Installed-client window (below)}} |
-| {{ops-api}} | packages/{{ops-api-contract}} | {{e.g. ops}} | {{staff sessions/tokens}} | {{Deploy-together or rolling window}} |
-| {{api}} | packages/{{api-contract}} | {{e.g. ops-api (server-to-server)}} | {{service credentials, never a user's token}} | {{Rolling-deploy window}} |
+| api | packages/{{api-contract}} | customer-web, customer-app, drivers-web, drivers-app, vendor-web, vendor-app, admin-web, admin-app | {{user sessions/tokens}} | {{Installed-client window (below)}} |
+| api | packages/{{api-contract}} | partners-api, mcp-server, worker (server-to-server) | {{service credentials, never a user's token}} | {{Rolling-deploy window}} |
+| partners-api | packages/{{partners-api-contract}} | External partner systems (U-12) | {{partner API keys}} | {{Public API versioning, e.g. /v1 additive only}} |
+| mcp-server | packages/{{mcp-contract}} | AI agents (U-13) | {{agent connection tokens (R-31)}} | {{Tool schema versioning}} |
 
 ### API compatibility
 - Clients and servers use generated or shared types from the contract package; they don't hand-write request shapes.

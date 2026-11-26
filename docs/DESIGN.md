@@ -1,6 +1,6 @@
 # Product Design
 
-Status: Draft | Owner: {{owner}} | Version: 0.1 | Last updated: {{YYYY-MM-DD}}
+Status: Draft | Owner: @bankole2000 | Version: 0.2 | Last updated: 2026-11-26
 References: PRD.md
 
 ## Platforms and navigation
