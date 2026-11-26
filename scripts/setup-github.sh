@@ -133,7 +133,12 @@ fi
 if [ -n "$PROJECT" ] && [ "$PROJECT" != "(new)" ]; then
   LINKED=$(gh_retry api graphql -f query='query($o:String!,$n:Int!){repositoryOwner(login:$o){... on ProjectV2Owner{projectV2(number:$n){repositories(first:100){nodes{nameWithOwner}}}}}}' \
     -f o="$OWNER" -F n="$PROJECT" --jq '.data.repositoryOwner.projectV2.repositories.nodes[].nameWithOwner' 2>/dev/null || true)
-  if grep -qxiF "$REPO" <<< "$LINKED"; then
+  # Case-insensitive match in bash: grep -i -F can crash in Git Bash on Windows.
+  if [[ $'
+'"${LINKED,,}"$'
+' == *$'
+'"${REPO,,}"$'
+'* ]]; then
     SKIPPED+=("Project #$PROJECT already linked to $REPO")
   else
     change project link "$PROJECT" --owner "$OWNER" --repo "$REPO"
@@ -211,7 +216,10 @@ if [ -n "$DO_LABELS" ]; then
   EXISTING=$(gh_retry label list --repo "$REPO" --limit 500 --json name,color,description --jq '.[] | "\(.name)|\(.color)|\(.description)"')
   for entry in "${LABELS[@]}"; do
     IFS='|' read -r name color desc <<< "$entry"
-    current=$(grep -iF -m1 "$name|" <<< "$EXISTING" | grep -i "^$name|" || true)
+    current=""
+    while IFS= read -r line; do
+      if [ "${line%%|*}" = "$name" ] || [ "${line%%|*}" = "${name,,}" ]; then current="$line"; break; fi
+    done <<< "$EXISTING"
     if [ -z "$current" ]; then
       change label create "$name" --repo "$REPO" --color "$color" --description "$desc"
       CREATED+=("label $name")
