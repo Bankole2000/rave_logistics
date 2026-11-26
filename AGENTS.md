@@ -94,6 +94,7 @@ Validation
 - Escalate financial, medical, legal, privacy and security decisions for qualified review using the `review:*` labels in docs/GITHUB.md.
 
 ## Project-specific conventions
+- **Configurable TBDs:** a TBD that can be a setting (a threshold, interval, limit, timeout, period or count) is assumed to be configurable. Write it as a named setting with a default (environment variable or admin setting) and record the default, instead of leaving an open decision. Only targets the team commits to, policies and vendor choices stay TBD or become open decisions.
 - Apps and stack: see docs/TECHNICAL.md, Components, and each `apps/<app>/AGENTS.md`.
 - Commands: see the README [Commands](README.md#commands) section.
 - {{Other conventions agents must know, e.g. code style, directories never to edit, generated files}}
