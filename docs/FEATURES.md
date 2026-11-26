@@ -2,6 +2,7 @@
 
 Status: Draft | Owner: @bankole2000 | Version: 0.3 | Last updated: 2026-11-26
 References: PRD.md (requirements FR-), ROADMAP.md (milestones)
+<!-- review:ignore-columns Requirements, Milestone, Status -->
 
 ## How this file works
 This file is the list of everything the product lets someone do. It is drafted first and feeds the other documents: when it changes, the PRD requirements, DESIGN, TECHNICAL, TESTING and ROADMAP are updated to match, and they refer back to these IDs.
