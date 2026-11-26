@@ -1,6 +1,6 @@
 # Development Roadmap
 
-Status: Draft | Owner: {{owner}} | Version: 0.1 | Last updated: {{YYYY-MM-DD}}
+Status: Draft | Owner: @bankole2000 | Version: 0.2 | Last updated: 2026-11-26
 References: FEATURES.md, PRD.md, DESIGN.md, TECHNICAL.md, TESTING.md
 
 ## Milestones
@@ -13,10 +13,12 @@ Managing milestones: a milestone is the set of journeys in its Journeys column. 
 | Milestone | Outcome | Journeys | Exit criteria |
 |---|---|---|---|
 | M0 - Foundation | Runnable skeleton of every app | — | The M0 checklist below is done; TC-000 passes on a fresh clone |
-| M1 - {{First slice, e.g. Customers can publish}} | {{What a user can do when it is done}} | {{J-01, J-02}} | {{Features of these journeys pass their acceptance tests on their surfaces}} |
-| M2 - {{Next slice}} | {{What a user can do when it is done}} | {{J-03}} | {{Features of these journeys pass their acceptance tests on their surfaces}} |
-| M3 - Hardening and launch | Reliable, deployed product | — | Acceptance and security checks pass; release checklist approved |
-| M4 - Post-launch (stretch) | Improvements | {{Deferred journeys}} | Defined per release |
+| M1 - Vendors and drivers can join | Admins set up zones and staff; vendors are approved and publish their catalogues; drivers are approved | J-12, J-05, J-06, J-08 | Features of these journeys pass their acceptance tests on their surfaces |
+| M2 - Customers can order and receive deliveries | A customer orders from the nearest store, the vendor prepares it and the nearest driver delivers it | J-01, J-02, J-07, J-09, J-03 | Features of these journeys pass their acceptance tests on their surfaces |
+| M3 - Support, operations and payouts | Staff resolve problems and watch live deliveries; vendors and drivers get paid; management sees reports | J-04, J-11, J-10, J-13, J-14 | Features of these journeys pass their acceptance tests on their surfaces |
+| M4 - Partners can integrate | E-commerce partners book and track deliveries through the documented Partner API | J-15 | Features of these journeys pass their acceptance tests on their surfaces |
+| M5 - Hardening and launch | Reliable, deployed product | — | Acceptance and security checks pass; release checklist approved |
+| M6 - Post-launch (stretch) | AI agents order, track and triage through MCP | J-16 | Defined per release |
 
 ### M0 checklist
 Every project with a client and a server needs these in M0; drop the ones that don't apply.
