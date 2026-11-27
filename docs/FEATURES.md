@@ -1,6 +1,6 @@
 # Features
 
-Status: Draft | Owner: @bankole2000 | Version: 0.4 | Last updated: 2026-11-26
+Status: Approved | Owner: @bankole2000 | Version: 0.5 | Last updated: 2026-11-27
 References: PRD.md (requirements FR-), ROADMAP.md (milestones)
 <!-- review:ignore-columns Requirements, Milestone, Status -->
 
@@ -257,11 +257,11 @@ A journey is what one user does to reach a goal, as features in order. The Miles
 | FT-095 | U-13 AI agent | A-02 views | R-08 Order | for a staff member who connected it; within their role | S-16 | Agent lists stuck or late orders for triage; changes still need a person. | Could | FT-096, FT-062 | J-16 | FR-035 | approved |
 | FT-096 | U-01 Customer | A-01 creates | R-31 Agent connection | own account; chosen scopes and expiry | S-01, S-02 | Agent can act within the scopes until the connection expires or is revoked. | Could | FT-002 | J-16 | FR-035 | approved |
 | FT-097 | U-01 Customer | A-05 removes | R-01 Customer account | own account | S-01, S-02 | Account and personal data are deleted, except records the law requires keeping. | Must | FT-001 | J-01 | FR-003 | approved |
-| FT-098 | U-04 Vendor owner | A-08 signs in | R-30 Session | own business; phone number or email | S-08, S-10 | Signed in with phone number or email and a one-time code; stays signed in on that device. | Must | FT-028 | J-05 | — (new) | proposed |
-| FT-099 | U-06 Support agent | A-08 signs in | R-30 Session | every staff role (support, operations, admin, HR, finance, management); phone number or email from the invitation | S-11, S-13 | Signed in with phone number or email and a one-time code, and sees only the tools of their role. | Must | FT-072 | J-12 | — (new) | proposed |
-| FT-100 | U-06 Support agent | A-09 signs out | R-30 Session | own sessions; every staff role | S-11, S-13 | Device is signed out and needs a new code to sign in. | Must | FT-099 | J-12 | — (new) | proposed |
-| FT-101 | U-01 Customer | A-08 signs in | R-30 Session | own account; social sign-in (providers TBD, see Gaps); customers only | S-01, S-02 | Signed in with a social account linked to the customer's verified phone number. | Could | FT-001 | J-01 | — (new) | proposed |
-| FT-102 | U-14 System | A-10 rejects | R-30 Session | staff roles listed in setting `TWO_FACTOR_REQUIRED_ROLES` (default: admin, finance) without a second factor | S-11, S-13 | Staff in those roles must also confirm sign-in with an authenticator app; sign-in without it is refused. | Could | FT-099 | J-12 | — (new) | proposed |
+| FT-098 | U-04 Vendor owner | A-08 signs in | R-30 Session | own business; phone number or email | S-08, S-10 | Signed in with phone number or email and a one-time code; stays signed in on that device. | Must | FT-028 | J-05 | FR-015 | approved |
+| FT-099 | U-06 Support agent | A-08 signs in | R-30 Session | every staff role (support, operations, admin, HR, finance, management); phone number or email from the invitation | S-11, S-13 | Signed in with phone number or email and a one-time code, and sees only the tools of their role. | Must | FT-072 | J-12 | FR-028 | approved |
+| FT-100 | U-06 Support agent | A-09 signs out | R-30 Session | own sessions; every staff role | S-11, S-13 | Device is signed out and needs a new code to sign in. | Must | FT-099 | J-12 | FR-028 | approved |
+| FT-101 | U-01 Customer | A-08 signs in | R-30 Session | own account; social sign-in (providers TBD, see Gaps); customers only | S-01, S-02 | Signed in with a social account linked to the customer's verified phone number. | Could | FT-001 | J-01 | FR-036 | approved |
+| FT-102 | U-14 System | A-10 rejects | R-30 Session | staff roles listed in setting `TWO_FACTOR_REQUIRED_ROLES` (default: admin, finance) without a second factor | S-11, S-13 | Staff in those roles must also confirm sign-in with an authenticator app; sign-in without it is refused. | Could | FT-099 | J-12 | FR-037 | approved |
 
 ## Coverage matrix
 Generated from the Features table (approved and proposed features only); don't edit it by hand. Each cell lists the actions a user can take on a resource. An empty cell is not an error, but it is worth a look: who can change or remove this resource?
@@ -307,4 +307,4 @@ Questions found while building the lists that the features don't answer yet. Eac
 Requirements that are not user + action + resource stay in the PRD: quality targets (NFR-), constraints, and "works on every surface" requirements, which the Surfaces list covers.
 
 ## Approval
-{{Human approver, revision, date}}
+Revision 0.5 approved by Bankole on 2026-11-27 (docs/reviews/2026-11-27-FEATURES.md).
