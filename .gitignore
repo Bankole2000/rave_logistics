@@ -38,6 +38,7 @@ venv/
 Pods/
 
 # Build output
+target/
 dist/
 build/
 out/

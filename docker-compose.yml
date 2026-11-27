@@ -1,0 +1,27 @@
+# Local services for development and CI only (TECHNICAL.md, Local development).
+# Trust authentication and 127.0.0.1 only: no password sits in the repository, and nothing
+# is reachable from other machines. Never use this configuration for a deployed environment.
+# Personal extra services go in a gitignored docker-compose.override.yml.
+name: rave-logistics
+
+services:
+  postgres:
+    image: postgis/postgis:18-3.6
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: rave
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "127.0.0.1:15482:5432"
+    volumes:
+      # PostgreSQL 18 images keep data under /var/lib/postgresql/<major>/.
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d rave"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: "no"
+
+volumes:
+  postgres-data:

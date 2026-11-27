@@ -123,12 +123,14 @@ This section is the single source of truth for project commands. Other documents
 - Build: {{command}}
 
 ### api
-- Run locally: {{command}}
-- Test: {{command}}
-- Lint: {{command}}
-- Typecheck: {{command or N/A}}
-- Build: {{command}}
-- Migrations: {{command or N/A}}
+Run from the repo root. First time: `docker compose up -d` (local PostgreSQL with PostGIS on 127.0.0.1:15482) and `cp apps/api/.env.example apps/api/.env`.
+- Run locally: `cargo run -p api` (listens on http://127.0.0.1:18082; try `GET /health`)
+- Test: `cargo test -p api` (needs the local database)
+- Lint: `cargo fmt --all -- --check` and `cargo clippy -p api --all-targets -- -D warnings`
+- Typecheck: N/A (covered by the build)
+- Build: `cargo build -p api --release`
+- Migrations: run when api starts; manually `sqlx migrate run --source apps/api/migrations` (needs DATABASE_URL)
+- Contract: `cargo run -p api --bin openapi -- --out packages/api-contract/openapi.json` (add `--check` to verify it is up to date)
 
 ### worker
 - Run locally: {{command}}
