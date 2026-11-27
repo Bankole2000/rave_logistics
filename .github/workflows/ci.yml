@@ -1,0 +1,108 @@
+# CI for the apps that exist (README Commands). ci.yml.example has jobs for the planned apps:
+# copy a job from it when its app is created in apps/.
+#
+# - "changes" works out which apps a PR touches; a change under packages/ or to root config
+#   runs every app.
+# - Each app job runs only when its app changed (it shows as skipped otherwise).
+# - "ci-ok" runs last and fails if any job failed or was cancelled. It is the required check
+#   (with risk-gate): bash scripts/setup-github.sh --ruleset --required-check ci-ok,risk-gate
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            shared: &shared
+              - 'packages/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'rust-toolchain.toml'
+              - '.github/workflows/ci.yml'
+            api:
+              - *shared
+              - 'apps/api/**'
+
+  repo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      # ubuntu-latest ships Node; these scripts have no dependencies.
+      - name: Agent workflow scripts
+        run: node --test scripts/test/*.test.mjs
+      - name: Check features (FEATURES.md references, PRD links, generated parts)
+        run: node scripts/check-features.mjs
+      # check-placeholders.sh still lists the planned apps' {{placeholders}} (README Commands);
+      # it becomes a step here once they are filled in.
+
+  api:
+    needs: changes
+    if: needs.changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # A database for integration tests, with trust authentication so no password sits in the
+    # repository (it only listens inside the runner). Same image as docker-compose.yml.
+    services:
+      postgres:
+        image: postgis/postgis:18-3.6
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: rave
+        ports: ['127.0.0.1:15482:5432']
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres@127.0.0.1:15482/rave
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v7
+      # Installs the toolchain pinned in rust-toolchain.toml (README Commands, "api").
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - name: Lint
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy -p api --all-targets -- -D warnings
+      - name: Test
+        run: cargo test -p api
+      - name: Contract is up to date
+        run: cargo run -p api --bin openapi -- --out packages/api-contract/openapi.json --check
+      - name: Build
+        run: cargo build -p api --release
+
+  ci-ok:
+    if: always()
+    needs: [changes, repo, api]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail if any job failed or was cancelled
+        run: |
+          if ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}; then
+            echo "One or more jobs failed or were cancelled."
+            exit 1
+          fi
+          echo "All jobs passed or were skipped."

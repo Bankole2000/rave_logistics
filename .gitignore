@@ -81,3 +81,6 @@ Thumbs.db
 
 # Claude Code personal settings
 .claude/settings.local.json
+
+# Task and review worktrees made by scripts/agent (docs/GITHUB.md, Agent workflow)
+.worktrees/

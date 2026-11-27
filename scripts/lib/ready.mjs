@@ -63,6 +63,7 @@ export function specIndex({ features = '', prd = '', testing = '' }) {
   const ftJourney = new Map(rows.map((r) => [r.ID, (r.Journey || '').match(/J-\d+/)?.[0] ?? '']));
   const journeys = new Map(tableRows(features, 'Journeys').map((r) => [r.ID, {
     name: r.Name ?? '',
+    goal: r.Goal ?? '',
     milestone: (r.Milestone || '').match(/M\d+/)?.[0] ?? '',
     features: (r['Features, in order'] || '').match(/FT-\d+/g) ?? [],
   }]));
@@ -188,4 +189,91 @@ export function compareTasks(a, b) {
   const mb = Number(milestoneKey(b.milestone).slice(1) || 99);
   if (ma !== mb) return ma - mb;
   return a.number - b.number;
+}
+
+// ---------- approved documents approve scope ----------
+
+/** `{ status, version }` from a document's header line ("Status: … | … | Version: …"). */
+export function docHeader(text) {
+  const line = (text ?? '').split('\n').find((l) => /^Status:/.test(l)) ?? '';
+  return {
+    status: line.match(/^Status:\s*([^|]+?)\s*(\||$)/)?.[1] ?? '',
+    version: line.match(/\bVersion:\s*([^|\s]+)/)?.[1] ?? '',
+  };
+}
+
+/** Milestone key → journeys it delivers, from the Milestones table in docs/ROADMAP.md. */
+export function roadmapMilestones(roadmap) {
+  const out = new Map();
+  for (const r of tableRows(roadmap ?? '', 'Milestones')) {
+    const key = milestoneKey(r.Milestone);
+    if (key) out.set(key, new Set((r.Journeys ?? '').match(/J-\d+/g) ?? []));
+  }
+  return out;
+}
+
+/**
+ * Whether approved documents approve a task (owner's rule of 2026-11-27): every document in
+ * the rule has Status Approved, the task is product work of one journey (not Platform),
+ * ROADMAP.md puts that journey in the task's milestone, the task passes the definition of
+ * ready, and its journey plan has no open questions.
+ * @returns { {ok: boolean, why: string, docs?: string} }
+ */
+export function docsApproval({ body, index, milestone, docs, roadmap, problems = [], openQuestions = false }) {
+  for (const [path, text] of Object.entries(docs)) {
+    const h = docHeader(text);
+    if (h.status !== 'Approved') return { ok: false, why: `${path} is ${h.status || 'not'} approved` };
+  }
+  const journey = journeyOf(body, index);
+  if (journey === PLATFORM) return { ok: false, why: 'Platform work is approved by the owner (approve-journey Platform)' };
+  if (problems.length) return { ok: false, why: 'not ready' };
+  const key = milestoneKey(milestone);
+  if (!roadmapMilestones(roadmap).get(key)?.has(journey)) return { ok: false, why: `ROADMAP.md doesn't put ${journey} in ${key || 'a milestone'}` };
+  if (openQuestions) return { ok: false, why: `the ${journey} plan has open questions for the owner` };
+  const versions = Object.entries(docs).map(([p, t]) => `${p.split('/').pop()} ${docHeader(t).version}`).join(', ');
+  return { ok: true, why: `approved documents (${versions})`, docs: versions };
+}
+
+// ---------- milestone plans ----------
+
+/**
+ * Orders a plan's tasks into waves: wave 1 has no dependency inside the plan, wave 2
+ * depends only on wave 1, and so on. Tasks in one wave can be built in parallel.
+ * @param { {key: string, blockedBy?: (string|number)[]}[]} tasks
+ * @returns { {waves: string[][], errors: string[]} }
+ */
+export function planWaves(tasks) {
+  const keys = new Set(tasks.map((t) => t.key));
+  const deps = new Map(tasks.map((t) => [t.key, (t.blockedBy ?? []).filter((d) => keys.has(d))]));
+  const errors = [];
+  for (const t of tasks) {
+    for (const d of t.blockedBy ?? []) if (typeof d === 'string' && !keys.has(d) && !/^#?\d+$/.test(d)) errors.push(`${t.key}: depends on ${d}, which isn't in the plan (use its issue number for an existing issue)`);
+  }
+  const wave = new Map();
+  const visiting = new Set();
+  const depth = (k, path) => {
+    if (wave.has(k)) return wave.get(k);
+    if (visiting.has(k)) { errors.push(`dependency cycle: ${[...path, k].join(' → ')}`); return 0; }
+    visiting.add(k);
+    const w = 1 + Math.max(0, ...deps.get(k).map((d) => depth(d, [...path, k])));
+    visiting.delete(k);
+    wave.set(k, w);
+    return w;
+  };
+  for (const t of tasks) depth(t.key, []);
+  const waves = [];
+  for (const t of tasks) (waves[wave.get(t.key) - 1] ??= []).push(t.key);
+  return { waves: waves.filter(Boolean), errors: [...new Set(errors)] };
+}
+
+/**
+ * Approved features of a journey that no task names and the plan doesn't defer.
+ * @param {string} journey  J-xx
+ * @param {string[]} bodies task bodies of the journey
+ * @param {Record<string,string>} deferred  FT → reason it is left for later
+ */
+export function uncoveredFeatures(journey, bodies, index, deferred = {}) {
+  const named = new Set(bodies.flatMap((b) => idsOf(b).match(/FT-\d{3,}/g) ?? []));
+  const features = index.journeys.get(journey)?.features ?? [];
+  return features.filter((f) => index.ft.get(f) === 'approved' && !named.has(f) && !deferred[f]);
 }

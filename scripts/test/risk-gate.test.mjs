@@ -7,12 +7,12 @@ import { run } from '../lib/risk-gate.mjs';
 const rulesPath = fileURLToPath(new URL('../../.github/risk-rules.json', import.meta.url));
 const HEAD = 'a'.repeat(40);
 
-function fakeGitHub({ files, labels = [], reviews = [], draft = false, contents = {} }) {
+function fakeGitHub({ files, labels = [], reviews = [], draft = false, contents = {}, body = '' }) {
   const state = { labels: [...labels], statuses: [], removed: [], added: [] };
   const api = {
     rest: {
       pulls: {
-        get: async () => ({ data: { number: 5, draft, head: { sha: HEAD }, base: { sha: 'b'.repeat(40) }, labels: state.labels.map((name) => ({ name })) } }),
+        get: async () => ({ data: { number: 5, draft, body, head: { sha: HEAD }, base: { sha: 'b'.repeat(40) }, labels: state.labels.map((name) => ({ name })) } }),
         listFiles: 'listFiles',
         listReviews: 'listReviews',
       },
@@ -25,13 +25,13 @@ function fakeGitHub({ files, labels = [], reviews = [], draft = false, contents 
         getContent: async ({ path, ref }) => {
           const c = contents[`${ref}:${path}`];
           if (c === undefined) { const e = new Error('nf'); e.status = 404; throw e; }
-          return { data: { content: Buffer.from(JSON.stringify(c)).toString('base64') } };
+          return { data: { content: Buffer.from(typeof c === 'string' ? c : JSON.stringify(c)).toString('base64') } };
         },
       },
     },
     paginate: async (what) => (what === 'listReviews' ? reviews : []),
   };
-  api.paginate.iterator = async function* () { yield { data: files.map((filename) => ({ filename })) }; };
+  api.paginate.iterator = async function* () { yield { data: files.map((f) => (typeof f === 'string' ? { filename: f, status: 'modified' } : f)) }; };
   return { api, state };
 }
 
@@ -83,12 +83,41 @@ test('drafts are pending', async () => {
   assert.equal((await gate({ files: ['apps/api/src/a.rs'], draft: true, reviews: [review('Verdict: Approve')] })).status.state, 'pending');
 });
 
-test('a breaking contract change is high risk; an additive one is not', async () => {
+test('a breaking contract change is high risk; an additive one is medium', async () => {
   const f = 'packages/api-contract/openapi.json';
   const base = { paths: { '/v1/me': { get: {} } } };
   const contents = (head) => ({ [`${'b'.repeat(40)}:${f}`]: base, [`${HEAD}:${f}`]: head });
   const additive = { paths: { '/v1/me': { get: {} }, '/v1/x': { get: {} } } };
-  assert.equal((await gate({ files: [f], contents: contents(additive), reviews: [review('Verdict: Approve')] })).status.state, 'success');
+  const add = await gate({ files: [f], contents: contents(additive), reviews: [review('Verdict: Approve')] });
+  assert.equal(add.status.state, 'pending', 'medium: the plain review is not independent');
+  assert.deepEqual(add.state.added, ['risk:medium']);
   const { status } = await gate({ files: [f], contents: contents({ paths: {} }), reviews: [review('Verdict: Approve')] });
   assert.equal(status.state, 'failure');
+});
+
+const independent = (name) => `Verdict: Approve\n\nScope and risk\nOnly the sign-in route.\n\n<!-- agent:reviewer ${name} -->`;
+
+test('medium risk needs an approving review by a different agent session', async () => {
+  const files = ['apps/api/src/auth/otp.rs'];
+  const body = 'Closes #3\n<!-- agent:author worker-1 -->';
+  assert.equal((await gate({ files, body, reviews: [review(independent('reviewer-1'))] })).status.state, 'success');
+  const self = await gate({ files, body, reviews: [review(independent('worker-1'))] });
+  assert.equal(self.status.state, 'pending');
+  assert.match(self.status.description, /is the author/);
+  const noRisk = await gate({ files, body, reviews: [review('Verdict: Approve\n<!-- agent:reviewer reviewer-1 -->')] });
+  assert.match(noRisk.status.description, /Scope and risk/);
+});
+
+test('migrations: new additive ones are medium; destructive or edited ones are high', async () => {
+  const f = 'apps/api/migrations/20261128000000_x.sql';
+  const sql = (text) => ({ [`${HEAD}:${f}`]: text });
+  const body = '<!-- agent:author worker-1 -->';
+  const ok = await gate({ files: [{ filename: f, status: 'added' }], contents: sql('CREATE TABLE x (id int); -- DROP nothing'), body, reviews: [review(independent('reviewer-1'))] });
+  assert.equal(ok.status.state, 'success');
+  assert.deepEqual(ok.state.added, ['risk:medium']);
+  const drop = await gate({ files: [{ filename: f, status: 'added' }], contents: sql('ALTER TABLE x DROP COLUMN y;'), reviews: [review(independent('reviewer-1'))] });
+  assert.equal(drop.status.state, 'failure');
+  assert.match(drop.status.description, /destructive migration: DROP/);
+  const edited = await gate({ files: [{ filename: f, status: 'modified' }], reviews: [review(independent('reviewer-1'))] });
+  assert.equal(edited.status.state, 'failure');
 });

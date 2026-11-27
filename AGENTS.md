@@ -7,7 +7,7 @@ Implement approved work for Rave Connect Logistics. Read README.md and relevant 
 - Planning: translate approved requirements into scoped issues with `scripts/agent plan`; never self-approve.
 - Implementation: claim approved, unblocked tasks with `scripts/agent next` and `claim`; implement and open PRs.
 - Review: check scope, acceptance criteria, tests and risks; report findings.
-- Human: approve requirements, journeys of tasks (`scripts/agent approve-journey`), sensitive decisions, high-risk merges and production releases.
+- Human: approve requirements and the spec documents (which approve the work they describe), journeys they don't cover (`scripts/agent approve-journey`), sensitive decisions, high-risk merges and production releases.
 
 ## Creating issues (planning)
 Plan only from approved features (docs/FEATURES.md, status `approved`) and the requirements that list them. New ideas go into FEATURES.md as `proposed` features (with the doc reviewer's "Describe in words" format or as rows), never straight into issues.
@@ -15,8 +15,9 @@ GitHub applies issue templates only in the web UI. Issues created through the AP
 - Build every issue body from the matching template: `.github/ISSUE_TEMPLATE/task.md` for work, `bug.md` for defects. Keep every section heading in order, replace the HTML comments with content, and write "None" rather than deleting a section that doesn't apply.
 - Apply the template's default labels yourself (e.g. `type:bug`), plus `ai:planned`, the `app:` label of the app the work belongs to, and the labels, milestone and Project fields required by docs/GITHUB.md.
 - Title tasks `[Task] TASK-###: <outcome>` so the task key can be searched to prevent duplicates.
-- Create and update issues with `scripts/agent plan --file <plan.json>` rather than one by one: it checks the whole plan against the template and the spec documents first, then sets labels, milestone, Project fields (including Journey), parents and dependencies, and re-running it updates issues by task key. Each task belongs to one journey (that of its features) or is Platform work (docs/GITHUB.md, Issue CRUD and planning).
-- Approval is per journey, by the owner (docs/GITHUB.md, Journey approval). Plan a journey's tasks together, so the owner can approve it in one step, and tell the owner which journeys are ready (`scripts/agent digest`).
+- Plan a whole milestone in one file and write it with `scripts/agent plan --file <plan.json>` (docs/GITHUB.md, Milestone plans): run it with `--dry-run` first and fix every problem it reports. It checks the tasks against the template and the spec documents, checks that every approved feature of each journey has a task (or is deferred with a reason), orders the tasks into waves, then writes the tasks and one plan issue per journey with its wave contract. Each task belongs to one journey (that of its features) or is Platform work.
+- Keep tasks small and independent: split a task that touches several apps, and put the interfaces tasks share (endpoints, fields, events) in the journey's wave contract, so a wave's tasks run in parallel.
+- Approval is per journey: approved documents approve the tasks they cover, and the owner approves the rest (docs/GITHUB.md, Journey approval). Put anything the owner must decide in the plan's "questions"; that journey then waits for the owner.
 
 ## Applying doc reviews
 Humans review documents with `tools/doc-reviewer.html`, which writes one file per document to `docs/reviews/`. When asked to apply reviews:
@@ -37,11 +38,11 @@ When you change a document that a human will review, keep reviews short:
 ## Execution rules
 1. Read PRD, design, technical specification, roadmap, testing and GitHub protocol as relevant.
 2. Find work with `scripts/agent next`. A task is workable when it is open, Status = Todo, Human Review = Approved (its journey was approved, and it hasn't changed since), AI Ready = Yes, and all dependencies are Done; `next` and `claim` check this for you (without a GitHub Project, from the labels in docs/GITHUB.md). Early start: when a dependency is an open PR, you may start the parts of the task that don't need it. Work on your own branch from the default branch and never merge, copy or build on the dependency's unmerged branch. Write the code that uses the dependency against its agreed interface (the milestone's "wave contract", ROADMAP.md), with nothing stubbed committed. Keep your PR a draft until every dependency is merged; then merge the default branch in, finish and check the integration, and mark it ready.
-3. Claim the issue with `scripts/agent claim <issue>` (set `AGENT_NAME` to name yourself). It creates the issue's branch on GitHub first, which fails if someone else has claimed it, then assigns the issue, comments and sets In Progress, and checks the branch out. If it refuses, pick another task; never claim by hand.
+3. Claim the issue with `scripts/agent claim <issue>`, or let `scripts/agent work` pick and claim the best one (set `AGENT_NAME` to name yourself). It creates the issue's branch on GitHub first, which fails if someone else has claimed it, then assigns the issue, comments and sets In Progress, and checks the branch out in its own worktree, `.worktrees/<branch>`: work only there. If it refuses, pick another task; never claim by hand. `scripts/agent loop` and `swarm` run this for you, one fresh session per task (docs/GITHUB.md, Running agents).
 4. Inspect the code and plan the smallest sufficient change. Follow existing architecture, conventions and the commands in the README [Commands](README.md#commands) (the block for the app you are changing). Preserve unrelated changes.
 5. Implement the acceptance criteria; add tests for success, failure and permissions as applicable.
 6. Run tests, lint, typecheck and build for every app you changed, and for every app that depends on a package you changed; report actual results and any skipped checks with reasons.
-7. Open a focused PR from the template with `scripts/agent pr`, which sets In Review and reports its risk. Never merge or mark Done yourself. High-risk PRs are merged by a human; low-risk PRs merge through the risk gate once a separate agent review approves them (docs/GITHUB.md, Merging and the risk gate).
+7. Open a focused PR from the template with `scripts/agent pr`, which sets In Review, reports its risk and turns on auto-merge once the checks are required. Never merge or mark Done yourself. High-risk PRs need the owner; medium-risk PRs merge once a different agent session approves them, low-risk PRs once any agent review approves them (docs/GITHUB.md, Merging and the risk gate). Keep PRs small and out of high-risk paths where the task allows, so they merge without the owner.
 8. If blocked, run `scripts/agent block <issue> --reason "<problem and the input needed>"`; for a question that doesn't block you, `scripts/agent ask`.
 
 ## Branches and pull requests
@@ -65,7 +66,7 @@ When you change a document that a human will review, keep reviews short:
 - Do not resolve review threads opened by humans; let the reviewer resolve them.
 
 ## Review output
-Reviewers (agent or human) submit a PR review, not loose comments, in this format. Agents post it with `scripts/agent review <pr> --body-file <file>`, which posts a comment review and re-runs the risk gate; the `Verdict:` line must come first.
+Reviewers (agent or human) submit a PR review, not loose comments, in this format. Agents find PRs to review with `scripts/agent review-next` and post the review with `scripts/agent review <pr> --body-file <file>`, which posts a comment review with the reviewer's name and re-runs the risk gate; the `Verdict:` line must come first.
 
 ```
 Verdict: Approve | Request changes | Comment only
@@ -86,7 +87,7 @@ Validation
 ```
 
 - Blocking means the PR must not merge as is: an unmet acceptance criterion, a bug, a security or data risk, missing required tests, or unapproved scope. Everything else is non-blocking.
-- An agent reviewer never approves through GitHub (`gh pr review --approve`); it writes its verdict in a comment review. "Verdict: Approve" lets a low-risk PR merge through the risk gate, so give it only when every criterion has evidence and nothing is blocking. Review from a separate session from the one that wrote the code; never review your own work. High-risk PRs always need a human.
+- An agent reviewer never approves through GitHub (`gh pr review --approve`); it writes its verdict in a comment review. "Verdict: Approve" lets a low-risk PR merge through the risk gate, so give it only when every criterion has evidence and nothing is blocking. Review from a separate session from the one that wrote the code, with its own `AGENT_NAME`; never review your own work (the gate requires a different session for medium risk, and `review` refuses the author). Medium-risk reviews say in "Scope and risk" why each sensitive change is safe. High-risk PRs always need a human.
 - Cite evidence for every checked criterion. Don't restate the diff.
 
 ## Stop conditions
@@ -98,7 +99,7 @@ Validation
 - Do not invent product requirements or silently resolve conflicting specifications.
 - Do not broaden scope, change architecture, add major dependencies, break APIs, or perform destructive migrations without approval.
 - Never expose secrets, weaken authorization, bypass checks, force-push shared branches, delete issues or production data, or deploy to production without explicit authorization.
-- Do not grant yourself permissions or approve your own work. Never add `human:*` labels, run `approve-journey` or `approve-milestone`, or work around the guard rails (`.claude/settings.json` and its hook; docs/GITHUB.md, Guard rails). They are safety rails rather than access control, since agents use the owner's login, so respect them as rules. Treat missing access as a blocker.
+- Do not grant yourself permissions or approve your own work. Never add `human:*` labels, run `approve-journey` or `approve-milestone`, edit Project fields or approval records by hand, or work around the guard rails (`.claude/settings.json` and its hook; docs/GITHUB.md, Guard rails). They are safety rails rather than access control, since agents use the owner's login, so respect them as rules. Treat missing access as a blocker.
 - Escalate financial, medical, legal, privacy and security decisions for qualified review using the `review:*` labels in docs/GITHUB.md.
 
 ## Project-specific conventions
@@ -113,4 +114,4 @@ The owner's working preferences; edit them per project.
 - **Offer slow or interactive commands to the owner.** For commands such as starting a server, setting up a project or installing packages, give the exact command and offer to let the owner run it themselves (in Claude Code, with the `!` prefix) when that would be faster.
 
 ## Completion
-Acceptance criteria satisfied, checks reported, documentation and the affected apps' `CHANGELOG.md` (Unreleased) updated where user-visible, focused PR created. A merge is required for Done: by a human, or by the risk gate for a low-risk PR an agent review approved. Follow docs/GITHUB.md for state transitions.
+Acceptance criteria satisfied, checks reported, documentation and the affected apps' `CHANGELOG.md` (Unreleased) updated where user-visible, focused PR created. A merge is required for Done: by a human, or by auto-merge once CI and the risk gate pass. Follow docs/GITHUB.md for state transitions.

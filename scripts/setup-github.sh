@@ -219,6 +219,7 @@ if [ -n "$DO_LABELS" ]; then
     "review:financial|d93f0b|Financial review required"
     "impact:breaking|b60205|Compatibility impact"
     "risk:high|b60205|Set by the risk gate: a human approves the merge"
+    "risk:medium|fbca04|Set by the risk gate: may merge after an independent agent review"
     "risk:low|0e8a16|Set by the risk gate: may merge after an agent review"
     "human:merge-ok|0e8a16|Only a human adds this: approves merging the head commit"
     "agent:reviewed|c5def5|An agent reviewed the head commit (re-runs the risk gate)"
@@ -360,6 +361,14 @@ if [ -n "$PROJECT$PROJECT_FROM" ]; then
         CREATED+=("Project field $name")
       fi
     done
+    # Approval: a text field scripts/agent writes ("<journey> <hash> <by>"), so checking
+    # approvals takes one query instead of reading every issue's comments.
+    if grep -qxF "Approval" <<< "$HAVE_FIELDS"; then
+      SKIPPED+=("Project field Approval")
+    else
+      change project field-create "$PROJECT" --owner "$OWNER" --name "Approval" --data-type TEXT
+      CREATED+=("Project field Approval")
+    fi
     # Status needs Todo, In Progress, In Review, Blocked and Done (docs/GITHUB.md). The API
     # replaces the whole option list, which would clear the Status of existing items, so
     # missing options are added only while the Project has no items.
