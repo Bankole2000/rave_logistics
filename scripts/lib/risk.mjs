@@ -54,11 +54,11 @@ export function destructiveSql(sql, rules) {
  * @param {string[]} files   changed paths (renamed files: both old and new path)
  * @param {string[]} labels  labels on the pull request
  * @param {object}   rules   .github/risk-rules.json
- * @param {{breakingContracts?: string[], changedContracts?: string[],
+ * @param { {breakingContracts?: string[], changedContracts?: string[],
  *          migrations?: {file: string, status: string, sql?: string}[]}} [extra]
  *   contract files with breaking or additive changes, and changed migration files with
  *   their status (added, modified, removed, renamed) and, for added ones, their SQL
- * @returns {{level: 'high'|'medium'|'low', reasons: string[]}} the reasons for that level
+ * @returns { {level: 'high'|'medium'|'low', reasons: string[]} } the reasons for that level
  */
 export function classify(files, labels, rules, extra = {}) {
   const high = [], medium = [];

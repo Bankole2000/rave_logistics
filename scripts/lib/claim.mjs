@@ -15,7 +15,7 @@ export function git(args, { cwd } = {}) {
  * Creates `branch` on `remote` from `base` (e.g. origin/main), with a commit naming the
  * claimant so the push carries something of its own, and checks it out locally: in a new
  * worktree at `worktree` when given, otherwise in `cwd`.
- * @returns {{ok: true, sha: string, path: string} | {ok: false, reason: string}}
+ * @returns { {ok: true, sha: string, path: string} | {ok: false, reason: string} }
  */
 export function claimBranch({ cwd, remote = 'origin', base, branch, claimant, worktree }) {
   const ref = `refs/heads/${branch}`;

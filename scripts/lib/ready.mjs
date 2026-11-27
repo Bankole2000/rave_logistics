@@ -217,7 +217,7 @@ export function roadmapMilestones(roadmap) {
  * the rule has Status Approved, the task is product work of one journey (not Platform),
  * ROADMAP.md puts that journey in the task's milestone, the task passes the definition of
  * ready, and its journey plan has no open questions.
- * @returns {{ok: boolean, why: string, docs?: string}}
+ * @returns { {ok: boolean, why: string, docs?: string} }
  */
 export function docsApproval({ body, index, milestone, docs, roadmap, problems = [], openQuestions = false }) {
   for (const [path, text] of Object.entries(docs)) {
@@ -239,8 +239,8 @@ export function docsApproval({ body, index, milestone, docs, roadmap, problems =
 /**
  * Orders a plan's tasks into waves: wave 1 has no dependency inside the plan, wave 2
  * depends only on wave 1, and so on. Tasks in one wave can be built in parallel.
- * @param {{key: string, blockedBy?: (string|number)[]}[]} tasks
- * @returns {{waves: string[][], errors: string[]}}
+ * @param { {key: string, blockedBy?: (string|number)[]}[]} tasks
+ * @returns { {waves: string[][], errors: string[]} }
  */
 export function planWaves(tasks) {
   const keys = new Set(tasks.map((t) => t.key));
