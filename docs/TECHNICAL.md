@@ -1,7 +1,8 @@
 # Technical Specification
 
-Status: Draft | Owner: @bankole2000 | Version: 0.3 | Last updated: 2026-11-26
+Status: Draft | Owner: @bankole2000 | Version: 0.4 | Last updated: 2026-11-27
 References: FEATURES.md, PRD.md, DESIGN.md
+<!-- review:focus ADR-008, "Identity and sessions", "users, sign_in_codes and sessions" -->
 
 ## Architecture overview
 Proposed (ADR-001 to ADR-007). All eight client apps use one Vue UI stack. The four web apps run in the browser. The four installed apps wrap the same kind of Vue UI in Tauri for Android, iOS and, for admin-app and vendor-app, desktop. Every client calls `api`, the only owner of the database. `partners-api` and `mcp-server` are thin Rust services. They authenticate their own callers (partner API keys, agent connections) and call `api` with service credentials, so business rules live in one place. `worker` runs the timed and background work: order acceptance timeouts, driver offers, notifications, payout calculation and partner webhooks. It takes jobs from a queue in PostgreSQL.
@@ -54,7 +55,7 @@ One row per deployable app in `apps/`, per shared package in `packages/`, and fo
 
 ## Local development
 Defaults that avoid the usual clashes on a developer machine; change them only with a reason.
-- **Ports:** uncommon ones, so the apps don't collide with other local tools (3000, 5173, 8000 and 8080 are often taken): {{e.g. api 18080, web 13000}}. Record each app's port in its `.env.example`.
+- **Ports:** uncommon ones, so the apps don't collide with other local tools (3000, 5173, 8000 and 8080 are often taken): api 18082; local PostgreSQL 15482 (`docker-compose.yml`); web dev servers 13001 to 13004. Record each app's port in its `.env.example`.
 - **Host:** use `127.0.0.1`, not `localhost`, in URLs and bind addresses. `localhost` can resolve to IPv6 first, which adds a delay to every database connection on some systems and makes some dev servers listen on IPv6 only.
 - **Databases and other services** run in `docker-compose.yml` (committed) with trust authentication on `127.0.0.1` for local use and CI only, so no password sits in the repository. Each developer's extra services (caches, queues, other databases) go in a gitignored `docker-compose.override.yml`, which Compose loads automatically; commented-out services there cost nothing until needed. Turn off automatic restarts for local containers.
 - **CORS:** each server reads the allowed client origins from configuration (e.g. `API_CORS_ORIGINS`), with defaults for every local client: the web dev server and the desktop and mobile shells.
@@ -86,7 +87,10 @@ Significant modules within each component.
 ## Domain and data model
 Start from the resources (R-) in FEATURES.md: each stored resource becomes an entity, "Belongs to" becomes a relationship, and derived resources become queries or views. The users (U-) and the actions each may take (the coverage matrix) become the roles and permissions.
 
-{{Entities, fields, relationships, constraints, indexes, migrations. Which component owns each data store.}}
+api owns the database; other components go through its API. Migrations are in `apps/api/migrations/`.
+
+- **users, sign_in_codes and sessions** (R-30, ADR-008): `users` is one row per person (a verified phone number, unique, and `suspended_at`). Customer, driver, vendor and staff details will be separate tables pointing at it, so one number is one identity. `sign_in_codes` holds a hash of each one-time code, its attempts and expiry. `sessions` holds a SHA-256 hash of each session token, the device name, `last_seen_at` and `revoked_at`.
+- {{Other entities, fields, relationships, constraints and indexes, as they are added.}}
 
 ## API and integrations
 | ID | Operation | Input/output | Auth and errors | Requirement |
@@ -134,7 +138,8 @@ Every server app has a contract package. List every consumer, including other se
 - Client apps (web, mobile, desktop) are public: their code and configuration ship to users. They hold no secrets; anything they can access, an attacker can too. All authorization is enforced server-side.
 - Internal apps (e.g. admin, ops) are still public on the internet unless the network says otherwise; they rely on server-side authorization like any other client.
 - Server-to-server calls use service credentials scoped to what the caller needs, never a forwarded user token.
-- {{Identity, permissions, input validation, secrets storage, sensitive data, threat mitigations, retention}}
+- **Identity and sessions** (ADR-008): everyone signs in with a phone number and a one-time code. Limits are settings: `AUTH_CODE_TTL_SECONDS` (300), `AUTH_CODE_MAX_ATTEMPTS` (5), `AUTH_CODE_RESEND_SECONDS` (60), `AUTH_CODE_MAX_PER_HOUR` (5) and `AUTH_SESSION_IDLE_DAYS` (90). Requesting a code answers the same way whether or not the number has an account. Only hashes of codes and tokens are stored, and codes and tokens are never logged; phone numbers are logged masked.
+- {{Permissions, input validation, secrets storage, sensitive data, threat mitigations, retention}}
 
 ## Technical decisions
 | ID | Decision | Rationale | Status |
@@ -146,6 +151,7 @@ Every server app has a contract package. List every consumer, including other se
 | ADR-005 | Installed apps: Tauri 2 with a Vue UI for customer-app, drivers-app, admin-app and vendor-app. Mobile (Android, iOS) for all four, and desktop for admin-app and vendor-app. | One UI stack with the web apps, a Rust core that matches the backend, small binaries, and desktop plus mobile from one project. Risk: drivers-app needs location updates while backgrounded or locked (FT-053) and reliable push for offers that time out in `DRIVER_OFFER_TIMEOUT` (FT-050). Tauri's official geolocation plugin is foreground-only, and remote push (FCM, APNs) needs community plugins or a custom native plugin. Mitigation: a spike in M0 (ROADMAP.md) proves both on real Android and iOS devices before drivers-app work starts. If the spike fails, drivers-app uses Capacitor with the same Vue code, whose background geolocation and push plugins are mature. Alternatives: Capacitor for every mobile app (mobile only, so desktop would still need Tauri or Electron); Flutter or native (a second UI stack). | Proposed |
 | ADR-006 | API contracts: OpenAPI 3.1 generated from the Rust handlers with utoipa and committed in the contract packages. A typed TypeScript client is generated with openapi-typescript and openapi-fetch. MCP tool schemas are committed as a snapshot. | The code is the single source of truth, clients never hand-write request shapes, and CI fails when a spec or client is out of date. Alternative: spec-first with generated Rust stubs (harder to keep idiomatic in axum). | Proposed |
 | ADR-007 | Background jobs and live updates: a job queue in PostgreSQL (`FOR UPDATE SKIP LOCKED`, e.g. apalis with its Postgres backend) consumed by worker. Live updates over WebSockets from api, fanned out between api instances with PostgreSQL `LISTEN/NOTIFY`. | No extra infrastructure for the MVP, and a job is created in the same transaction as the change that needs it. Add Redis (or a managed queue) only when measured load needs it. Alternative: Redis or a managed queue from the start (more moving parts and cost). | Proposed |
+| ADR-008 | Authentication: one identity per person (`users`, keyed by verified phone number), signed in with a one-time code. Sessions are opaque random bearer tokens (`rcs_` prefix, 256 bits) stored as SHA-256 hashes and checked on every request; no JWTs. The same token works for web, mobile and desktop clients. Code delivery sits behind a `CodeSender` interface; until the SMS provider is chosen, only a console sender exists and release builds refuse it. Roles and permissions (FT-072) build on `users`. | A session can be revoked at once, which sign-out (FT-005) and suspension (FT-073) need. A database lookup per request is cheap at MVP scale. One identity lets a person be a customer and a driver without two accounts. Email codes, two-factor and social sign-in (FT-098 to FT-102, proposed) add methods to the same users and sessions. Alternatives: signed JWTs (no lookup, but can't be revoked before expiry without a deny list); a hosted identity service such as Cognito or Auth0 (less code, but a vendor, a cost per user, and SMS still to choose). | Proposed |
 
 ## Open decisions and approval
 Open decisions:

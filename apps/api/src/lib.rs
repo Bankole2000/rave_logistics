@@ -1,7 +1,9 @@
 //! Rave Connect Logistics api: the only owner of the database. Every client and server calls it.
 
+pub mod auth;
 pub mod config;
 pub mod error;
+pub mod extract;
 pub mod routes;
 pub mod state;
 pub mod telemetry;
@@ -18,7 +20,10 @@ use tower_http::{
     request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
     trace::TraceLayer,
 };
-use utoipa::OpenApi;
+use utoipa::{
+    Modify, OpenApi,
+    openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme},
+};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{config::Config, error::ApiError, state::AppState};
@@ -33,13 +38,40 @@ pub const REQUEST_ID_HEADER: HeaderName = HeaderName::from_static("x-request-id"
         license(name = "MIT", identifier = "MIT"),
     ),
     components(schemas(error::ErrorBody, error::ErrorDetail)),
-    tags((name = "health", description = "Service health")),
+    modifiers(&SessionAuth),
+    tags(
+        (name = "health", description = "Service health"),
+        (name = "auth", description = "Sign-in with a phone number and a one-time code, sessions and sign-out"),
+    ),
 )]
 struct ApiDoc;
 
+/// The `session` security scheme: `Authorization: Bearer <token>` from `POST /v1/auth/sessions`.
+struct SessionAuth;
+
+impl Modify for SessionAuth {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        let components = openapi.components.get_or_insert_with(Default::default);
+        components.add_security_scheme(
+            "session",
+            SecurityScheme::Http(
+                HttpBuilder::new()
+                    .scheme(HttpAuthScheme::Bearer)
+                    .description(Some("Session token from POST /v1/auth/sessions"))
+                    .build(),
+            ),
+        );
+    }
+}
+
 /// The routes and their OpenAPI description, collected together so they can't drift apart.
 fn api_router() -> OpenApiRouter<AppState> {
-    OpenApiRouter::with_openapi(ApiDoc::openapi()).routes(routes!(routes::health::health))
+    OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .routes(routes!(routes::health::health))
+        .routes(routes!(routes::auth::request_code))
+        .routes(routes!(routes::auth::sign_in))
+        .routes(routes!(routes::auth::sign_out))
+        .routes(routes!(routes::me::me))
 }
 
 /// The OpenAPI document for api (written to packages/api-contract by the `openapi` binary).
