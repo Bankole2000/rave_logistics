@@ -34,6 +34,8 @@ const blocked = [
   'cat apps/api/.env',
   'Get-Content .env.local',
   'echo x > .env',
+  'gh project item-edit --id PVTI_1 --project-id PVT_1 --field-id F --text "J-12 abc owner"',
+  'gh issue comment 3 --body "<!-- agent:approval journey=J-12 hash=abc -->"',
 ];
 const allowed = [
   'gh pr view 3',
@@ -41,6 +43,10 @@ const allowed = [
   'gh pr review 3 --comment --body-file r.md',
   'gh pr edit 3 --add-label agent:reviewed',
   'node scripts/agent.mjs claim 12',
+  'scripts/agent loop --role work --name worker-1',
+  'scripts/agent swarm --workers 2 --reviewers 1',
+  'scripts/agent review-next',
+  'gh project item-list 6 --owner Bankole2000',
   'git push -u origin 12-service-zones',
   'git tag -l',
   'tofu plan',

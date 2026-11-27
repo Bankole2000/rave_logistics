@@ -1,7 +1,7 @@
 # GitHub Management Specification
 
-Status: Draft | Owner: @bankole2000 | Version: 0.3 | Last updated: 2026-11-27
-<!-- review:focus "Journey approval", "Merging and the risk gate", "Guard rails", "Needs me" -->
+Status: Draft | Owner: @bankole2000 | Version: 0.4 | Last updated: 2026-11-27
+<!-- review:focus "Approved documents approve", "Medium risk", "auto-merge", "Running agents", "Milestone plans" -->
 
 ## Configuration
 - Repository: Bankole2000/rave_logistics
@@ -19,8 +19,9 @@ Status: Draft | Owner: @bankole2000 | Version: 0.3 | Last updated: 2026-11-27
 | Human Review | Required, Approved, Changes Requested | Required |
 | AI Ready | No, Yes | No |
 | Journey | J-01 … J-16 (docs/FEATURES.md, Journeys), Platform | Set by planner (`scripts/agent plan`) |
+| Approval | Text: `<journey> <fingerprint> <owner or docs>`, written by `scripts/agent` | Empty |
 
-Human Review and AI Ready are separate: only a human approves work; AI Ready indicates sufficient detail. The owner approves a journey at a time (see [Journey approval](#journey-approval)), which sets Human Review on its issues. Material scope changes invalidate approval. Do not use labels that duplicate these fields.
+Human Review and AI Ready are separate: AI Ready indicates sufficient detail; Human Review says the work is approved, by the owner or by documents the owner approved (see [Journey approval](#journey-approval)). The Approval field records which approval holds, so the scripts check every issue in one query. Material scope changes invalidate approval. Do not use labels that duplicate these fields.
 
 ### Without a Project
 If the repository has no GitHub Project, the same states are kept in labels, which `setup-github.sh` creates when it runs without `--project`. Every rule in this document and AGENTS.md then reads as follows, and Priority and Complexity go in the issue body.
@@ -80,7 +81,7 @@ One per app in `apps/`, plus one for shared code and one for repository-wide wor
 - `impact:breaking` — Compatibility impact
 
 ### Merge state
-- `risk:high`, `risk:low` — Set by the risk gate on every run, never by hand
+- `risk:high`, `risk:medium`, `risk:low` — Set by the risk gate on every run, never by hand
 - `human:merge-ok` — Only a human adds it: approves merging the head commit. The risk gate removes it when new commits are pushed
 - `agent:reviewed` — Added by `scripts/agent review` after it posts a review; adding it re-runs the risk gate. Removed when new commits are pushed
 
@@ -89,7 +90,21 @@ One per app in `apps/`, plus one for shared code and one for repository-wide wor
 - Create or update only authorized issues; preserve human comments and history. Use native parent/sub-issue and dependency relationships where available, otherwise link issue numbers in the body.
 - Create and update issues with `scripts/agent plan --file <plan.json>` (see [Agent workflow](#agent-workflow)). It checks the whole plan before writing anything, then sets milestone and labels, adds each issue to the Project, sets Todo, Human Review Required, Journey, Priority and Complexity, and sets AI Ready from the definition-of-ready check. It also links parents (sub-issues) and dependencies (GitHub issue dependencies, "blocked by"). Re-running a plan updates issues by task key instead of duplicating them. Report any failed step; do not claim success on partial writes.
 - Each task belongs to one journey: the journey of its features in docs/FEATURES.md. Work that belongs to no journey (repository tooling, infrastructure, cross-cutting work) is **Platform** work in its milestone; repo and infra tasks without features write "Platform" in place of the FT, FR and TC IDs. A task whose features span journeys is split.
-- Human approval remains required: the owner approves journeys, never the planner.
+- Approval never comes from the planner: approved documents or the owner approve (see [Journey approval](#journey-approval)).
+
+### Milestone plans
+Plan a whole milestone in one file, so its tasks can start together:
+
+```json
+{ "milestone": "M1",
+  "journeys": { "J-12": { "outcome": "…", "contract": "Endpoints and fields other tasks rely on", "questions": "None",
+                          "deferred": { "FT-031": "why it waits" } },
+                "Platform": { "outcome": "…", "contract": "None", "questions": "None" } },
+  "tasks": [ { "key": "TASK-010", "title": "…", "body": "<task template>", "priority": "High",
+               "complexity": "Small", "blockedBy": ["TASK-009", 42], "labels": ["type:feature", "app:api"] } ] }
+```
+
+`scripts/agent plan --file m1.json --dry-run` checks it and writes nothing: every task against the template and the spec documents, every approved feature of each journey covered by a task or deferred with a reason, dependencies known and without cycles, and the milestone's ROADMAP.md journeys all present (a warning). It prints the **waves**: wave 1 has no dependencies inside the plan, wave 2 depends only on wave 1, and so on; a wave's tasks run in parallel. Without `--dry-run` it creates or updates the tasks and one plan issue per journey, `[Plan] M1 J-12: <name>` (`.github/ISSUE_TEMPLATE/plan.md`), holding the outcome, the tasks by wave, the **wave contract** (ROADMAP.md) and open questions; the tasks become its sub-issues. Then it approves what the approved documents cover and says which journeys wait for the owner. A bare list of tasks still works, without plan issues.
 - Close duplicates with a reference only when authorized; prefer closing over deletion. Never delete without explicit authorization.
 
 ## Multi-app work
@@ -98,12 +113,18 @@ One per app in `apps/`, plus one for shared code and one for repository-wide wor
 - The parent issue is Done when all sub-issues are Done and the end-to-end acceptance test passes.
 
 ## Journey approval
-The owner approves work one journey at a time, not issue by issue: `scripts/agent approve-journey J-12`, or `scripts/agent approve-journey Platform --milestone M1` for a milestone's Platform work. `scripts/agent approve-milestone M1` does this for every journey in M1 and for its Platform work. Approving:
-- approves the journey's open tasks that pass the definition-of-ready check (Human Review = Approved, AI Ready = Yes), and lists the ones it skipped and why, so they can be fixed and approved by running it again;
-- records the approval on each issue as a comment with a fingerprint of the issue body. Ticking acceptance criteria keeps the approval; any other change to the body undoes it (Human Review back to Required, with a comment) as soon as `next`, `claim`, `ready` or `plan` sees it;
-- covers only the tasks open at that moment: tasks added to the journey later stay Required until the owner approves the journey again.
+Work is approved one journey at a time, never issue by issue, in one of two ways.
 
-Approving is a human action: the commands refuse to run inside Claude Code and the guard rails block them, so the owner runs them in their own terminal. `--dry-run` shows what would be approved. The milestone's parent issue holds its wave contract (ROADMAP.md) as before.
+**Approved documents approve scope** (owner, 2026-11-27). While `docs/FEATURES.md` and `docs/ROADMAP.md` both have Status Approved, `scripts/agent` approves a task by itself when it uses only approved features of one journey, ROADMAP.md delivers that journey in the task's milestone, it passes the definition-of-ready check, and its journey plan has no open questions. Approving those documents in the doc reviewer is the owner's approval of the work they describe. `plan`, `ready`, `next`, `claim` and `work` apply the rule; the comment on the issue says which document versions approved it. The rule is `approval.fromApprovedDocs` in `.github/risk-rules.json`; set it to false to approve every journey by hand.
+
+**The owner approves the rest** with `scripts/agent approve-journey J-12`, or `scripts/agent approve-journey Platform --milestone M1` for a milestone's Platform work, which the documents don't cover. `scripts/agent approve-milestone M1` does it for every journey in M1 and for its Platform work. `digest` lists what waits, with the command for each.
+
+Either way, approving:
+- approves the journey's open tasks that pass the definition-of-ready check (Human Review = Approved, AI Ready = Yes), and lists the ones it skipped and why;
+- records the approval on each issue, as a comment and in the Approval field, with a fingerprint of the issue body. Ticking acceptance criteria keeps the approval; any other change to the body undoes it as soon as `next`, `claim`, `ready` or `plan` sees it. A task the documents covered is then approved again by them if it still fits the rule; otherwise it waits for the owner;
+- covers only the tasks open at that moment.
+
+`approve-journey` and `approve-milestone` are human actions: they refuse to run inside an agent session and the guard rails block them, so the owner runs them in their own terminal. `--dry-run` shows what would be approved.
 
 ## Execution lifecycle
 Todo + Approved + AI Ready Yes + completed dependencies → In Progress → In Review → Done (after the merge: by a human, or through the risk gate for low-risk PRs). Early start (AGENTS.md, Execution rules 2): a task whose dependency is an open PR may go In Progress for the parts that don't need it; its PR stays a draft until the dependency is Done. Blocked can interrupt any active stage; return to Todo or In Progress as appropriate after resolution. Changes Requested returns the issue to In Progress (see AGENTS.md). Re-review material changes.
@@ -115,24 +136,36 @@ Clear objective, approved feature IDs (FEATURES.md) and requirement IDs, linked 
 Use the template, link the issue, report actual validation, identify risks. Use closing keywords only when the PR fully resolves the issue and targets the default branch. Open it with `scripts/agent pr`, which also reports its risk. Who merges depends on the risk (next section); verify issue closure and Project Done afterward.
 
 ## Merging and the risk gate
-The `risk-gate` workflow (`.github/workflows/risk-gate.yml`) judges every pull request against `.github/risk-rules.json` and reports a `risk-gate` status on its head commit:
-- **High risk** when a changed file matches `highRiskPaths` (migrations, `packages/`, `sdks/`, `infra/`, `.github/`, `.claude/`, `scripts/`, `docs/*.md`, AGENTS.md and CLAUDE.md files, dependency manifests and lock files, `.env.example`, docker-compose), a path under `apps/` has a sensitive segment (auth, session, payment, payout, refund, wallet, permission, role, secret), an API contract has a breaking change (removed path, operation, schema or property; newly required field or parameter), or the PR has a `review:*` or `impact:breaking` label. It passes only once a human adds `human:merge-ok`, or the human merges it themselves.
-- **Low risk** otherwise. It passes once an agent review of the head commit says `Verdict: Approve` (`scripts/agent review`). With auto-merge on, a low-risk PR then merges by itself when every required check passes.
-- New commits remove `human:merge-ok` and `agent:reviewed`, so an approval never carries over to code nobody looked at. Drafts are pending.
+The `risk-gate` workflow (`.github/workflows/risk-gate.yml`) judges every pull request against `.github/risk-rules.json` and reports a `risk-gate` status on its head commit. There are three levels:
+- **High risk:** the workflow and its rules (`.github/`, `.claude/`, `scripts/`, AGENTS.md and CLAUDE.md files), `infra/`, the spec documents (`docs/*.md`), money and secrets (an `apps/` path with payment, payout, refund, wallet, billing or secret in it), a migration that edits an existing file or has destructive SQL (DROP, TRUNCATE, RENAME, DELETE FROM, UPDATE … SET, ALTER COLUMN, SET NOT NULL), a breaking API contract change (removed path, operation, schema or property; newly required field or parameter), or a `review:*` or `impact:breaking` label. It passes only once a human adds `human:merge-ok`, or the human merges it themselves.
+- **Medium risk:** auth, sessions, roles, permissions, passwords and tokens under `apps/`, shared `packages/` and `sdks/`, dependency manifests and lock files, `.env.example`, docker-compose, new additive migrations and additive contract changes. It passes once an agent review of the head commit says `Verdict: Approve`, written by a **different agent session** than the PR's author (`scripts/agent pr` records the author's name, `scripts/agent review` the reviewer's; set `AGENT_NAME`), with a "Scope and risk" section.
+- **Low risk:** everything else. It passes once any agent review of the head commit says `Verdict: Approve`.
 
-The workflow runs on `pull_request_target`: it uses the rules and code of the default branch, so a pull request can't change what judges it, and it never checks out or runs the pull request's code. Changing the rules is itself high risk.
+New commits remove `human:merge-ok` and `agent:reviewed`, so an approval never carries over to code nobody looked at. Drafts are pending.
 
-Auto-merge stays off (`"autoMerge": false` in risk-rules.json) until CI runs on pull requests and `ci-ok` is required; otherwise a low-risk PR could merge without its tests. While it is off, the owner merges every PR, and the gate shows which ones an agent has already reviewed.
+**Auto-merge.** `scripts/agent pr` turns on auto-merge for every ready PR, but only once the default branch requires both `ci-ok` and `risk-gate` (`requiredChecks` in risk-rules.json); until then it says so and the owner merges. With both required, low- and medium-risk PRs merge by themselves when CI passes and their review approves, and a high-risk PR merges as soon as the owner adds `human:merge-ok`. Turn it on once: `bash scripts/setup-github.sh --required-check ci-ok,risk-gate`, after CI and the risk gate have each run on a pull request.
+
+The workflow runs on `pull_request_target`: it uses the rules and code of the default branch, so a pull request can't change what judges it, and it never checks out or runs the pull request's code (it reads changed files, migrations, contracts and reviews through the API). Changing the rules is itself high risk.
 
 ## Agent workflow
 Agents use `scripts/agent` (`node scripts/agent.mjs`; see the README Commands) instead of editing issue fields by hand:
-- `next`: the next task, which is Todo, approved and unchanged since, AI Ready, unassigned and not blocked by an open issue; ordered by Priority, milestone, then age.
-- `claim <issue>`: checks the same conditions, then creates the branch `<issue>-<title>` on GitHub with a push that fails if the branch already exists, then assigns the issue, comments who claimed it and sets In Progress. Agents share the owner's login, so the assignee can't tell agents apart; the branch is the lock, and of two agents claiming the same task, one gets it. The branch starts with an empty "claim" commit. Set `AGENT_NAME` to name the agent in the claim comment.
-- `pr`, `block`, `ask`: open the PR (In Review unless it's a draft); set Blocked with `needs:human-input` and the reason; ask the owner a question on the issue.
-- `ready`: re-runs the definition-of-ready check, sets AI Ready, and undoes approvals of changed issues.
-- `review <pr> --body-file <file>`: posts a review in the Review output format (AGENTS.md) as a comment review (GitHub doesn't let a PR's author approve it, and agents post as the owner), then adds `agent:reviewed` to re-run the risk gate.
+- `next`: the next tasks, which are Todo, approved and unchanged since, AI Ready, unassigned and not blocked by an open issue; ordered by Priority, milestone, then age.
+- `claim <issue>`: checks the same conditions, then creates the branch `<issue>-<title>` on GitHub with a push that fails if the branch already exists, then assigns the issue, comments who claimed it and sets In Progress. Agents share the owner's login, so the branch is the lock: of two agents claiming the same task, one gets it. The branch is checked out in its own worktree, `.worktrees/<branch>` (gitignored), so several agents can work in one repository at once; `--here` uses the current checkout instead. Set `AGENT_NAME` to name the agent.
+- `work`: claims the best workable task (the next one if another agent wins it) and prints its brief: where to work, what to read, how to finish.
+- `pr`, `block`, `ask`: open the PR (In Review unless it's a draft; auto-merge once the checks are required); set Blocked with `needs:human-input` and the reason; ask the owner a question on the issue.
+- `ready`: re-runs the definition-of-ready check, sets AI Ready, approves what the approved documents cover and undoes approvals of changed issues.
+- `review-next`: takes the oldest low- or medium-risk PR without a review of its head commit that this agent didn't write, locks it (an `agent-lock/review-…` branch, so two reviewers don't take the same commit), checks it out in `.worktrees/review-…` and prints the review brief.
+- `review <pr> --body-file <file>`: posts a review in the Review output format (AGENTS.md) as a comment review (GitHub doesn't let a PR's author approve it, and agents post as the owner), adds the reviewer's name and `agent:reviewed` to re-run the risk gate, and releases the lock. It refuses a review by the PR's author.
+- `cleanup`: removes worktrees and review locks of merged or closed work.
 - `risk`: the current branch's risk, as the gate will judge it.
 - `digest`: what needs the owner (next section).
+
+## Running agents
+One agent session per task keeps each session's context small, and a separate session reviews it:
+- `scripts/agent loop --role work --name worker-1` repeats: claim the next task in its worktree, start a fresh agent session there with the task brief, and check that it ended with a PR or a reason (otherwise it marks the task Blocked so it isn't lost). `--role review --name reviewer-1` does the same with `review-next`. `--max N` stops after N jobs; `--wait S` keeps polling every S seconds instead of stopping when there is nothing to do.
+- `scripts/agent swarm --workers 2 --reviewers 1 --wait 120` starts several loops at once. Each gets its own name, so reviewers never review their own work.
+- The agent command is `claude -p --permission-mode acceptEdits` by default, with the prompt on standard input; set `--cmd` or `AGENT_CMD` for another (for example `codex exec -`). Sessions start in the worktree, so `.claude/settings.json` and its guard hook apply to them. Commands the settings don't allow are refused in a non-interactive session; add the project's build and test commands to the allow list.
+- Parallel work comes from the plan's waves: tasks in one wave don't depend on each other, and the wave contract fixes the interfaces between them.
 
 ## "Needs me" view
 Two Project views (Project → **+ New view** → Table; double-click the tab to rename it, type the filter, then **Save**):
@@ -147,7 +180,7 @@ Turn on the Project's built-in workflows (Project → Workflows): Auto-add to pr
 
 ## Guard rails
 Agents run in the owner's terminal with the owner's GitHub login and keys, so GitHub can't tell them apart from the owner. Human-only actions are therefore stopped locally and checked again on GitHub:
-- `.claude/settings.json` denies them (merging, approving PRs, approving journeys and milestones, pushing to the default branch, force-pushing, tags and releases, triggering workflows, `tofu apply`/`import`/`destroy`, reading or editing `.env` files). Its pre-command hook (`.claude/hooks/guard.mjs`, rules in `scripts/lib/guard.mjs`) blocks the same actions however the command is written, and also adding `human:*` labels and running `setup-github.sh` without `--dry-run`.
+- `.claude/settings.json` denies them (merging, approving PRs, approving journeys and milestones, editing Project fields or approval records by hand, pushing to the default branch, force-pushing, tags and releases, triggering workflows, `tofu apply`/`import`/`destroy`, reading or editing `.env` files). Its pre-command hook (`.claude/hooks/guard.mjs`, rules in `scripts/lib/guard.mjs`) blocks the same actions however the command is written, and also adding `human:*` labels and running `setup-github.sh` without `--dry-run`.
 - On GitHub: the ruleset (pull requests only, no force-push), the required `ci-ok` and `risk-gate` checks, and the removal of `human:merge-ok` and `agent:reviewed` on new commits.
 
 These stop mistakes. They don't stop someone determined to get round them, who could run the same commands outside Claude Code with the same login. Treat them as safety rails, not access control. A team that needs real separation gives agents their own GitHub identity (a GitHub App or machine user) without merge rights.

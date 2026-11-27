@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { globToRegExp, classify, breakingOpenApiChanges } from '../lib/risk.mjs';
+import { globToRegExp, classify, breakingOpenApiChanges, independentReview } from '../lib/risk.mjs';
 
 const rules = JSON.parse(readFileSync(new URL('../../.github/risk-rules.json', import.meta.url), 'utf8'));
 
@@ -19,21 +19,51 @@ test('ordinary app code is low risk', () => {
   assert.deepEqual(r, { level: 'low', reasons: [] });
 });
 
-test('sensitive paths, keywords and labels are high risk', () => {
-  for (const f of ['apps/api/migrations/2_x.sql', '.github/workflows/ci.yml', 'scripts/agent.mjs', 'docs/FEATURES.md',
-    'apps/api/Cargo.toml', 'apps/api/src/auth/mod.rs', 'apps/web/src/payments/form.tsx', 'apps/api/src/routes/staff_roles.rs']) {
+test('workflow, infrastructure, spec documents, money and secrets are high risk', () => {
+  for (const f of ['.github/workflows/ci.yml', 'scripts/agent.mjs', 'docs/FEATURES.md', 'infra/main.tf', 'AGENTS.md',
+    'apps/api/AGENTS.md', 'apps/web/src/payments/form.tsx', 'apps/api/src/routes/payouts.rs', 'apps/api/src/secrets.rs']) {
     assert.equal(classify([f], [], rules).level, 'high', f);
+  }
+  assert.equal(classify(['apps/web/src/a.ts'], ['review:security'], rules).level, 'high');
+  assert.equal(classify(['apps/web/src/a.ts'], ['type:feature'], rules).level, 'low');
+});
+
+test('auth, roles, shared packages and dependencies are medium risk', () => {
+  for (const f of ['apps/api/src/auth/mod.rs', 'apps/api/src/routes/staff_roles.rs', 'apps/api/src/session.rs',
+    'packages/ui/src/Button.vue', 'apps/api/Cargo.toml', 'Cargo.lock', 'apps/api/.env.example', 'docker-compose.yml']) {
+    assert.equal(classify([f], [], rules).level, 'medium', f);
   }
   // Keywords match whole path segments, not parts of words.
   assert.equal(classify(['apps/web/src/author.tsx'], [], rules).level, 'low');
-  assert.equal(classify(['apps/web/src/a.ts'], ['review:security'], rules).level, 'high');
-  assert.equal(classify(['apps/web/src/a.ts'], ['type:feature'], rules).level, 'low');
+  // The highest level wins.
+  assert.equal(classify(['apps/api/src/auth/mod.rs', 'scripts/x.mjs'], [], rules).level, 'high');
+});
+
+test('migrations are judged by status and SQL', () => {
+  const f = 'apps/api/migrations/2_x.sql';
+  const m = (status, sql) => ({ migrations: [{ file: f, status, sql }] });
+  assert.equal(classify([f], [], rules, m('added', 'CREATE TABLE t (id bigint primary key);')).level, 'medium');
+  assert.equal(classify([f], [], rules, m('added', 'ALTER TABLE t RENAME TO u;')).level, 'high');
+  assert.equal(classify([f], [], rules, m('added', 'UPDATE t SET a = 1;')).level, 'high');
+  assert.equal(classify([f], [], rules, m('added', '-- DROP in a comment only\nCREATE INDEX i ON t (a);')).level, 'medium');
+  assert.equal(classify([f], [], rules, m('modified')).level, 'high');
+  assert.equal(classify([f], [], rules).level, 'high', 'unknown status');
 });
 
 test('contract files are judged by their changes', () => {
   const f = 'packages/api-contract/openapi.json';
   assert.equal(classify([f], [], rules).level, 'low');
+  assert.equal(classify([f], [], rules, { changedContracts: [f] }).level, 'medium');
   assert.equal(classify([f], [], rules, { breakingContracts: [`${f}: path removed`] }).level, 'high');
+});
+
+test('an independent review names a different reviewer and covers scope and risk', () => {
+  const pr = 'Closes #1\n<!-- agent:author worker-1 -->';
+  const r = (name, extra = '\nScope and risk\nnone') => `Verdict: Approve${extra}\n<!-- agent:reviewer ${name} -->`;
+  assert.equal(independentReview(pr, r('reviewer-2')).ok, true);
+  assert.equal(independentReview(pr, r('Worker-1')).ok, false);
+  assert.equal(independentReview(pr, r('reviewer-2', '')).ok, false);
+  assert.equal(independentReview(pr, 'Verdict: Approve\nScope and risk').ok, false);
 });
 
 test('breaking OpenAPI changes', () => {

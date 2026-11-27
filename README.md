@@ -68,6 +68,8 @@ This section is the single source of truth for project commands. Other documents
 
 ### Repository scripts
 - Agent workflow: `scripts/agent <command>` (or `node scripts/agent.mjs`); `scripts/agent help` lists the commands (docs/GITHUB.md, Agent workflow)
+- Run agents: `scripts/agent swarm --workers 2 --reviewers 1 --wait 120`, or one loop: `scripts/agent loop --role work --name worker-1` (docs/GITHUB.md, Running agents)
+- What needs you: `scripts/agent digest`
 - Test the scripts: `node --test scripts/test/`
 - Features check: `node scripts/check-features.mjs`
 - GitHub setup: `bash scripts/setup-github.sh --all --project 6 --dry-run` (without `--dry-run` it changes GitHub: owner only)

@@ -13,10 +13,11 @@ export function git(args, { cwd } = {}) {
 
 /**
  * Creates `branch` on `remote` from `base` (e.g. origin/main), with a commit naming the
- * claimant so the push carries something of its own, and checks it out locally.
- * @returns {{ok: true, sha: string} | {ok: false, reason: string}}
+ * claimant so the push carries something of its own, and checks it out locally: in a new
+ * worktree at `worktree` when given, otherwise in `cwd`.
+ * @returns {{ok: true, sha: string, path: string} | {ok: false, reason: string}}
  */
-export function claimBranch({ cwd, remote = 'origin', base, branch, claimant }) {
+export function claimBranch({ cwd, remote = 'origin', base, branch, claimant, worktree }) {
   const ref = `refs/heads/${branch}`;
   if (git(['ls-remote', '--heads', remote, ref], { cwd })) {
     return { ok: false, reason: `${branch} already exists on ${remote}: someone else has claimed this task` };
@@ -33,9 +34,41 @@ export function claimBranch({ cwd, remote = 'origin', base, branch, claimant }) 
   } catch (e) {
     return { ok: false, reason: `${branch} was created on ${remote} by someone else first (${firstLine(e)})` };
   }
+  if (worktree) {
+    // Its own folder, so several agents can work on one machine without switching branches
+    // under each other.
+    git(['worktree', 'add', '-b', branch, worktree, sha], { cwd });
+    git(['branch', `--set-upstream-to=${remote}/${branch}`, branch], { cwd });
+    return { ok: true, sha, path: worktree };
+  }
   git(['switch', '-c', branch, sha], { cwd });
   git(['branch', `--set-upstream-to=${remote}/${branch}`], { cwd });
-  return { ok: true, sha };
+  return { ok: true, sha, path: cwd };
+}
+
+/** The main checkout of a repository (not a linked worktree), from any folder in it. */
+export function mainRoot(cwd) {
+  const common = git(['rev-parse', '--path-format=absolute', '--git-common-dir'], { cwd });
+  return common.replace(/[\\/]\.git[\\/]?$/, '');
+}
+
+/**
+ * Where task worktrees live: `.worktrees/<branch>` inside the main checkout (gitignored), so
+ * they stay inside the folder an agent is allowed to work in.
+ */
+export function worktreePath(cwd, branch) {
+  return `${mainRoot(cwd)}/.worktrees/${branch.replace(/[\\/]/g, '-')}`;
+}
+
+/** Linked worktrees: [{ path, branch }] (branch is '' when detached). */
+export function worktrees(cwd) {
+  const out = [];
+  let cur = null;
+  for (const line of git(['worktree', 'list', '--porcelain'], { cwd }).split('\n')) {
+    if (line.startsWith('worktree ')) { cur = { path: line.slice(9), branch: '' }; out.push(cur); }
+    else if (line.startsWith('branch ') && cur) cur.branch = line.slice(7).replace(/^refs\/heads\//, '');
+  }
+  return out.slice(1); // the first is the main checkout
 }
 
 /** Deletes the remote branch only if it still points at our claim commit. */
