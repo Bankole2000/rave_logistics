@@ -31,5 +31,11 @@
 /AGENTS.md @bankole2000
 /.github/ @bankole2000
 
+# Agent workflow and its guard rails: changes here change what agents may do
+/.claude/ @bankole2000
+/scripts/ @bankole2000
+/.github/risk-rules.json @bankole2000
+/.github/workflows/risk-gate.yml @bankole2000
+
 # Release automation: changes here reach production. Last, so it overrides /.github/
 /.github/workflows/release.yml @bankole2000
