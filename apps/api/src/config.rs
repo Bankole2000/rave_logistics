@@ -25,6 +25,41 @@ impl FromStr for LogFormat {
     }
 }
 
+/// Where one-time sign-in codes go. Only `console` exists until an SMS provider is chosen
+/// (PRD, open decisions).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CodeSenderKind {
+    /// Prints codes to api's standard error. Local development only; refused in release builds.
+    Console,
+}
+
+impl FromStr for CodeSenderKind {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "console" => Ok(Self::Console),
+            other => bail!("AUTH_CODE_SENDER must be console, got {other:?}"),
+        }
+    }
+}
+
+/// Sign-in limits. Each is a setting with a default (AGENTS.md, configurable TBDs).
+#[derive(Debug, Clone)]
+pub struct AuthConfig {
+    pub code_sender: CodeSenderKind,
+    /// How long a one-time code stays valid.
+    pub code_ttl_secs: i64,
+    /// Wrong guesses allowed per code before it stops working.
+    pub code_max_attempts: i32,
+    /// Minimum wait before another code can be sent to the same phone number.
+    pub code_resend_secs: i64,
+    /// Codes allowed per phone number in any rolling hour.
+    pub code_max_per_hour: i64,
+    /// A session unused for this long is signed out.
+    pub session_idle_days: i32,
+}
+
 #[derive(Debug, Clone)]
 pub struct Config {
     pub bind_addr: SocketAddr,
@@ -34,6 +69,7 @@ pub struct Config {
     pub cors_origins: Vec<String>,
     pub log_format: LogFormat,
     pub migrate_on_start: bool,
+    pub auth: AuthConfig,
 }
 
 impl Config {
@@ -63,7 +99,29 @@ impl Config {
             migrate_on_start: or("API_MIGRATE_ON_START", "true")
                 .parse()
                 .context("API_MIGRATE_ON_START must be true or false")?,
+            auth: AuthConfig {
+                code_sender: or("AUTH_CODE_SENDER", "console").parse()?,
+                code_ttl_secs: number(&get, "AUTH_CODE_TTL_SECONDS", 300)?,
+                code_max_attempts: number(&get, "AUTH_CODE_MAX_ATTEMPTS", 5)?,
+                code_resend_secs: number(&get, "AUTH_CODE_RESEND_SECONDS", 60)?,
+                code_max_per_hour: number(&get, "AUTH_CODE_MAX_PER_HOUR", 5)?,
+                session_idle_days: number(&get, "AUTH_SESSION_IDLE_DAYS", 90)?,
+            },
         })
+    }
+}
+
+/// Reads a non-negative number setting, or its default when unset.
+fn number<T>(get: &impl Fn(&str) -> Option<String>, key: &str, default: T) -> anyhow::Result<T>
+where
+    T: FromStr + PartialOrd + Default,
+{
+    let Some(raw) = get(key) else {
+        return Ok(default);
+    };
+    match raw.trim().parse::<T>() {
+        Ok(v) if v >= T::default() => Ok(v),
+        _ => bail!("{key} must be a non-negative whole number, got {raw:?}"),
     }
 }
 
@@ -117,6 +175,37 @@ mod tests {
         ]))
         .unwrap();
         assert_eq!(config.cors_origins, ["http://a.test", "http://b.test"]);
+    }
+
+    #[test]
+    fn auth_defaults_apply() {
+        let config = Config::from_lookup(lookup(&[("DATABASE_URL", "postgres://x")])).unwrap();
+        assert_eq!(config.auth.code_sender, CodeSenderKind::Console);
+        assert_eq!(config.auth.code_ttl_secs, 300);
+        assert_eq!(config.auth.code_max_attempts, 5);
+        assert_eq!(config.auth.code_resend_secs, 60);
+        assert_eq!(config.auth.code_max_per_hour, 5);
+        assert_eq!(config.auth.session_idle_days, 90);
+    }
+
+    #[test]
+    fn negative_or_non_numeric_auth_settings_are_rejected() {
+        for value in ["-1", "five"] {
+            let result = Config::from_lookup(lookup(&[
+                ("DATABASE_URL", "postgres://x"),
+                ("AUTH_CODE_MAX_ATTEMPTS", value),
+            ]));
+            assert!(result.is_err(), "{value} should be rejected");
+        }
+    }
+
+    #[test]
+    fn unknown_code_sender_is_rejected() {
+        let result = Config::from_lookup(lookup(&[
+            ("DATABASE_URL", "postgres://x"),
+            ("AUTH_CODE_SENDER", "carrier-pigeon"),
+        ]));
+        assert!(result.is_err());
     }
 
     #[test]

@@ -40,10 +40,230 @@
           }
         }
       }
+    },
+    "/v1/auth/codes": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Sends a one-time sign-in code to a phone number.",
+        "description": "The response is the same whether or not the number has an account.",
+        "operationId": "request_code",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Code sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeSent"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalid_phone` or `invalid_body`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`too_many_requests`: wait `Retry-After` seconds",
+            "headers": {
+              "retry-after": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "description": "Seconds to wait"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/sessions": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Checks a one-time code and signs in, creating the account on first sign-in.",
+        "operationId": "sign_in",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignedIn"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalid_code`, `code_expired` or `invalid_body`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`account_suspended`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/sessions/current": {
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Signs out this device: its session stops working at once (FT-005).",
+        "operationId": "sign_out",
+        "responses": {
+          "204": {
+            "description": "Signed out"
+          },
+          "401": {
+            "description": "`unauthorized`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/v1/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Returns the signed-in user.",
+        "operationId": "me",
+        "responses": {
+          "200": {
+            "description": "The signed-in user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`unauthorized`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
     }
   },
   "components": {
     "schemas": {
+      "CodeRequest": {
+        "type": "object",
+        "required": [
+          "phone"
+        ],
+        "properties": {
+          "phone": {
+            "type": "string",
+            "description": "A Nigerian mobile number in any common format.",
+            "example": "0803 123 4567"
+          }
+        }
+      },
+      "CodeSent": {
+        "type": "object",
+        "required": [
+          "code_id",
+          "phone",
+          "expires_in_seconds",
+          "resend_after_seconds"
+        ],
+        "properties": {
+          "code_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Send this back with the code."
+          },
+          "expires_in_seconds": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "phone": {
+            "type": "string",
+            "description": "The number the code was sent to, in E.164 form.",
+            "example": "+2348031234567"
+          },
+          "resend_after_seconds": {
+            "type": "integer",
+            "format": "int64",
+            "description": "When another code can be requested for this number."
+          }
+        }
+      },
       "ErrorBody": {
         "type": "object",
         "required": [
@@ -95,12 +315,92 @@
           }
         }
       },
+      "SignedIn": {
+        "type": "object",
+        "required": [
+          "token",
+          "session_id",
+          "user",
+          "is_new_user"
+        ],
+        "properties": {
+          "is_new_user": {
+            "type": "boolean",
+            "description": "True when this sign-in created the account (FT-001)."
+          },
+          "session_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "token": {
+            "type": "string",
+            "description": "Send as `Authorization: Bearer <token>`. Shown only once; store it securely."
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        }
+      },
       "Status": {
         "type": "string",
         "enum": [
           "ok",
           "unavailable"
         ]
+      },
+      "User": {
+        "type": "object",
+        "required": [
+          "id",
+          "phone",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Verified phone number, E.164.",
+            "example": "+2348031234567"
+          }
+        }
+      },
+      "VerifyRequest": {
+        "type": "object",
+        "required": [
+          "code_id",
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "123456"
+          },
+          "code_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "device_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Shown later in the list of signed-in devices, e.g. \"Pixel 8\". Optional."
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "session": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Session token from POST /v1/auth/sessions"
       }
     }
   },
@@ -108,6 +408,10 @@
     {
       "name": "health",
       "description": "Service health"
+    },
+    {
+      "name": "auth",
+      "description": "Sign-in with a phone number and a one-time code, sessions and sign-out"
     }
   ]
 }

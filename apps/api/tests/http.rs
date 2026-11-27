@@ -23,7 +23,13 @@ fn test_config() -> Config {
 }
 
 fn app(db: PgPool) -> Router {
-    api::app(AppState { db }, &test_config())
+    let config = test_config();
+    let state = AppState {
+        db,
+        auth: config.auth.clone(),
+        code_sender: std::sync::Arc::new(api::auth::sender::MemorySender::default()),
+    };
+    api::app(state, &config)
 }
 
 /// A pool pointing at a port where nothing listens, to simulate a database outage.

@@ -1,5 +1,11 @@
 use anyhow::Context;
-use api::{config::Config, state::AppState};
+use std::sync::Arc;
+
+use api::{
+    auth::sender::{CodeSender, ConsoleSender},
+    config::{CodeSenderKind, Config},
+    state::AppState,
+};
 use tokio::net::TcpListener;
 
 #[tokio::main]
@@ -8,6 +14,8 @@ async fn main() -> anyhow::Result<()> {
     let config = Config::from_env()?;
     api::telemetry::init(config.log_format);
 
+    // Checked before touching the database, so a misconfigured release fails without side effects.
+    let code_sender = code_sender(config.auth.code_sender)?;
     let db = api::connect_pool(&config)?;
     if config.migrate_on_start {
         api::MIGRATOR
@@ -16,7 +24,12 @@ async fn main() -> anyhow::Result<()> {
             .context("running database migrations (is the database up? `docker compose up -d`)")?;
     }
 
-    let app = api::app(AppState { db }, &config);
+    let state = AppState {
+        db,
+        auth: config.auth.clone(),
+        code_sender,
+    };
+    let app = api::app(state, &config);
     let listener = TcpListener::bind(config.bind_addr)
         .await
         .with_context(|| format!("binding {}", config.bind_addr))?;
@@ -25,6 +38,19 @@ async fn main() -> anyhow::Result<()> {
         .with_graceful_shutdown(shutdown_signal())
         .await?;
     Ok(())
+}
+
+/// The configured code sender. The console sender prints codes, so release builds refuse it.
+fn code_sender(kind: CodeSenderKind) -> anyhow::Result<Arc<dyn CodeSender>> {
+    match kind {
+        CodeSenderKind::Console if cfg!(debug_assertions) => {
+            tracing::warn!("AUTH_CODE_SENDER=console: sign-in codes are printed to stderr");
+            Ok(Arc::new(ConsoleSender))
+        }
+        CodeSenderKind::Console => anyhow::bail!(
+            "AUTH_CODE_SENDER=console prints sign-in codes and is for local development only; a release build needs an SMS sender, which doesn't exist yet"
+        ),
+    }
 }
 
 /// Loads a local `.env`; real environments set variables directly. Variables already set win,
