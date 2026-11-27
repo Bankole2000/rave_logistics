@@ -4,8 +4,7 @@ use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // A local .env is optional; real environments set variables directly.
-    dotenvy::dotenv().ok();
+    load_dotenv();
     let config = Config::from_env()?;
     api::telemetry::init(config.log_format);
 
@@ -26,6 +25,15 @@ async fn main() -> anyhow::Result<()> {
         .with_graceful_shutdown(shutdown_signal())
         .await?;
     Ok(())
+}
+
+/// Loads a local `.env`; real environments set variables directly. Variables already set win,
+/// and a missing file is ignored. Looks in the current directory, then (in debug builds only)
+/// in `apps/api/`, so `cargo run -p api` works from the repo root as well as from the app folder.
+fn load_dotenv() {
+    dotenvy::dotenv().ok();
+    #[cfg(debug_assertions)]
+    dotenvy::from_path(concat!(env!("CARGO_MANIFEST_DIR"), "/.env")).ok();
 }
 
 async fn shutdown_signal() {

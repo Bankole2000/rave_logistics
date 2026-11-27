@@ -49,7 +49,9 @@ impl Config {
             bind_addr: or("API_BIND_ADDR", "127.0.0.1:18082")
                 .parse()
                 .context("API_BIND_ADDR must be host:port")?,
-            database_url: get("DATABASE_URL").context("DATABASE_URL is required")?,
+            database_url: get("DATABASE_URL").context(
+                "DATABASE_URL is required. For local use: cp apps/api/.env.example apps/api/.env",
+            )?,
             db_max_connections: or("API_DB_MAX_CONNECTIONS", "10")
                 .parse()
                 .context("API_DB_MAX_CONNECTIONS must be a number")?,
