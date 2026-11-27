@@ -53,7 +53,7 @@ jobs:
       - uses: actions/checkout@v7
       # ubuntu-latest ships Node; these scripts have no dependencies.
       - name: Agent workflow scripts
-        run: node --test scripts/test/
+        run: node --test scripts/test/*.test.mjs
       - name: Check features (FEATURES.md references, PRD links, generated parts)
         run: node scripts/check-features.mjs
       # check-placeholders.sh still lists the planned apps' {{placeholders}} (README Commands);
