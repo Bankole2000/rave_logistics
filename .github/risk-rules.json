@@ -1,0 +1,39 @@
+{
+  "$comment": "Read by the risk-gate workflow and `node scripts/agent.mjs risk` (docs/GITHUB.md, Merging). A PR is high risk if any changed file matches highRiskPaths, any file under keywordScope has a highRiskKeywords path segment, a contract file has a breaking change, or it carries a highRiskLabels label. High-risk PRs merge only with the human:merge-ok label or a human merge. autoMerge: scripts/agent pr turns on auto-merge for low-risk PRs; keep it false until ci-ok is required. Changes to this file are themselves high risk.",
+  "highRiskPaths": [
+    "**/migrations/**",
+    "packages/**",
+    "sdks/**",
+    "infra/**",
+    ".github/**",
+    ".claude/**",
+    "AGENTS.md",
+    "**/AGENTS.md",
+    "CLAUDE.md",
+    "**/CLAUDE.md",
+    "scripts/**",
+    "docs/*.md",
+    "Cargo.toml",
+    "**/Cargo.toml",
+    "Cargo.lock",
+    "rust-toolchain.toml",
+    "**/package.json",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "**/.env.example",
+    "docker-compose.yml"
+  ],
+  "contractFiles": [
+    "packages/*-contract/openapi.json",
+    "packages/*-contract/**/openapi.json"
+  ],
+  "keywordScope": ["apps/**"],
+  "highRiskKeywords": ["auth", "session", "sessions", "payment", "payments", "payout", "payouts", "refund", "refunds", "wallet", "permission", "permissions", "role", "roles", "secret", "secrets"],
+  "highRiskLabels": ["review:*", "impact:breaking", "risk:high-override"],
+  "statusContext": "risk-gate",
+  "autoMerge": false,
+  "humanOkLabel": "human:merge-ok",
+  "agentReviewLabel": "agent:reviewed",
+  "riskLabels": { "high": "risk:high", "low": "risk:low" }
+}

@@ -4,6 +4,9 @@
 ## Related issue
 <!-- Link the issue. Use "Closes #N" only if this PR fully resolves it. -->
 
+## Risk
+<!-- `scripts/agent risk` output: low, or high with its reasons. High-risk PRs need the owner's merge or `human:merge-ok`; the risk-gate check reports the final word. -->
+
 ## Apps affected
 <!-- e.g. web; or packages/api-contract (used by web, mobile); or infra. Normally one app per PR. -->
 

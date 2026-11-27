@@ -66,6 +66,12 @@ Documents drafted or changed by an agent are reviewed by a human with `tools/doc
 ## Commands
 This section is the single source of truth for project commands. Other documents and agents refer here. Use "All apps" to check everything before a PR; use an app's block when working inside that app. There is one block per app, package with its own checks, and `infra`; add or delete blocks to match. Write N/A where a command doesn't apply. Keep the blocks separate (blank lines between them), so changes to different apps don't conflict.
 
+### Repository scripts
+- Agent workflow: `scripts/agent <command>` (or `node scripts/agent.mjs`); `scripts/agent help` lists the commands (docs/GITHUB.md, Agent workflow)
+- Test the scripts: `node --test scripts/test/`
+- Features check: `node scripts/check-features.mjs`
+- GitHub setup: `bash scripts/setup-github.sh --all --project 6 --dry-run` (without `--dry-run` it changes GitHub: owner only)
+
 ### All apps (repo root)
 - Install: {{command}}
 - Test: {{command}}
