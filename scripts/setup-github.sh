@@ -427,8 +427,8 @@ if [ -n "$DO_REPO_SETTINGS" ]; then
   fi
 fi
 if [ -n "$PROJECT$PROJECT_FROM" ]; then
-  MANUAL+=("Project #${PROJECT}: turn on the built-in workflows (Item closed → Done, Pull request merged → Done, Item added → Todo) in Project → Workflows")
-  MANUAL+=("Project #${PROJECT}: add a \"Needs me\" view (docs/GITHUB.md, \"Needs me\" view)")
+  MANUAL+=("Project #${PROJECT}: turn on the built-in workflows (Auto-add to project with is:pr is:open, Item closed → Done, Pull request merged → Done, Item added → Todo) in Project → Workflows")
+  MANUAL+=("Project #${PROJECT}: add the \"Needs me\" and \"Awaiting approval\" views (docs/GITHUB.md, \"Needs me\" view)")
 fi
 
 MANUAL+=("Project \"New issue default\" values (docs/GITHUB.md) aren't enforced by GitHub; agents set them when creating issues")
