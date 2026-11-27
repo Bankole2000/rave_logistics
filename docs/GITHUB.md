@@ -135,9 +135,15 @@ Agents use `scripts/agent` (`node scripts/agent.mjs`; see the README Commands) i
 - `digest`: what needs the owner (next section).
 
 ## "Needs me" view
-A Project view (Project → New view → Table, named "Needs me") with the filter `is:open label:needs:human-input,risk:high,human:changes-requested`, and a second view "Awaiting approval" filtered to `Human Review:Required AI Ready:Yes` and grouped by Journey. `scripts/agent digest` prints the same in the terminal: PRs waiting for the owner's merge or `human:merge-ok`, questions and blocked tasks, journeys waiting for approval with the command to approve each, and work in progress.
+Two Project views (Project → **+ New view** → Table; double-click the tab to rename it, type the filter, then **Save**):
+- **Needs me**: `is:open label:needs:human-input,risk:high`, which shows questions, blocked tasks and high-risk PRs. A comma means either value. Different qualifiers combine with AND, so one view can't also catch a field value such as Human Review "Changes Requested". Add a third view filtered by `human-review:"Changes Requested"` if you want those listed too.
+- **Awaiting approval**: `is:open is:issue human-review:Required ai-ready:Yes`, grouped by Journey (view menu ▾ → Group by → Journey). Field names in filters are lower-case with hyphens; the filter bar autocompletes them.
 
-Turn on the Project's built-in workflows (Project → Workflows): Item added to project → Todo, Item closed → Done, Pull request merged → Done. They keep Status right when work is closed or merged outside `scripts/agent`.
+PRs appear in a view only if they are in the Project. Turn on the built-in **Auto-add to project** workflow with the filter `is:pr is:open`, or high-risk PRs won't show in Needs me.
+
+`scripts/agent digest` prints the same in the terminal: PRs waiting for the owner's merge or `human:merge-ok`, questions and blocked tasks, journeys waiting for approval with the command to approve each, and work in progress.
+
+Turn on the Project's built-in workflows (Project → Workflows): Auto-add to project (`is:pr is:open`), Item added to project → Todo, Item closed → Done, Pull request merged → Done. They keep Status right when work is closed or merged outside `scripts/agent`.
 
 ## Guard rails
 Agents run in the owner's terminal with the owner's GitHub login and keys, so GitHub can't tell them apart from the owner. Human-only actions are therefore stopped locally and checked again on GitHub:

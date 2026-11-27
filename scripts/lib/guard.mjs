@@ -20,7 +20,8 @@ const COMMAND_RULES = [
   [/\bgh\s+release\s+(create|delete|edit|upload)\b/, 'releases are a human step'],
   [/\bgh\s+workflow\s+run\b/, 'workflows are triggered by a human (releases, deployments)'],
   [/\b(tofu|terraform)\b.*\s(apply|import|destroy)\b/, 'infrastructure changes need explicit human authorization'],
-  [/\bsetup-github\.sh\b(?!.*--dry-run)/, 'setup-github.sh changes GitHub; run it with --dry-run, or ask the owner'],
+  // Running it (the command starts with it, or with bash/sh and it), not naming it in grep or git diff.
+  [/^(\S*=\S*\s+)*((ba)?sh\s+)?\S*setup-github\.sh\b(?!.*--dry-run)/, 'setup-github.sh changes GitHub; run it with --dry-run, or ask the owner'],
   [/(^|[\s'"=\/\\<>])\.env(\.(?!example\b)[\w.-]+)?(?=$|[\s'"|;&)<>])/, 'secrets: .env files are not read or written by agents (.env.example is fine)'],
 ];
 
