@@ -1,7 +1,8 @@
 # Product Requirements Document
 
-Status: Draft | Owner: @bankole2000 | Version: 0.2 | Last updated: 2026-11-26
+Status: Draft | Owner: @bankole2000 | Version: 0.3 | Last updated: 2026-11-27
 References: FEATURES.md (users U-, resources R-, surfaces S-, journeys J-, features FT-)
+<!-- review:focus FR-015, FR-028, FR-036, FR-037 -->
 
 FEATURES.md feeds this document. When features are approved or changed there, the requirements below are updated to match, and each requirement lists the features it covers.
 
@@ -42,7 +43,7 @@ The Features column lists the FEATURES.md features (FT-) each requirement covers
 | FR-012 | FT-024 | Customers rate the store and driver of a delivered order. | The rating counts towards the store's and driver's scores. | Should |
 | FR-013 | FT-025, FT-026, FT-027 | Customers get help with their orders and follow their refunds. | A ticket opens a chat with support; messages and replies stay in one thread; refund amount and status are visible. | Must |
 | FR-014 | FT-028, FT-029, FT-030 | Vendors apply, are approved by support, and set up their stores. | An approved vendor's store, with location, hours, radius and prep time, is listed to nearby customers; a declined vendor sees the reason. | Must |
-| FR-015 | FT-031, FT-032 | Vendor owners give their staff logins limited to chosen stores. | A staff member signs in and sees only their stores. | Must |
+| FR-015 | FT-031, FT-032, FT-098 | Vendor owners and their staff sign in with a phone number or email and a one-time code; owners give staff logins limited to chosen stores. | The owner and each staff member sign in with a code; a staff member sees only their stores. | Must |
 | FR-016 | FT-033, FT-034, FT-035, FT-038 | Vendors manage products, prices, stock and whether a store is open. | Changes show to customers at once; out-of-stock items and paused stores receive no orders. | Must |
 | FR-017 | FT-036, FT-037 | Vendors import products from a CSV file and archive products. | Imported rows appear in the store and rows with errors are listed; archived products disappear and can be restored. | Should |
 | FR-018 | FT-039, FT-040, FT-041, FT-043 | Vendor staff receive, accept or decline, and mark orders ready. | New orders alert at once; accepting starts dispatch; declining moves the order on; ready notifies the driver. | Must |
@@ -55,7 +56,7 @@ The Features column lists the FEATURES.md features (FT-) each requirement covers
 | FR-025 | FT-062, FT-063, FT-064, FT-065, FT-066 | Support agents find orders, answer tickets, cancel orders and refund customers. | Refunds up to `REFUND_AGENT_LIMIT` (default ₦20,000) need no manager; every action notifies the person affected. | Must |
 | FR-026 | FT-067, FT-068 | Operations managers suspend drivers and stores. | A suspended driver can't go online and a suspended store receives no orders until reinstated. | Must |
 | FR-027 | FT-070, FT-071 | Admins define service zones inside a state, with pricing and commission. | New zones and prices apply to new quotes. | Must |
-| FR-028 | FT-072, FT-073, FT-074 | Admins manage staff accounts and roles; HR keeps staff records. | Each staff member sees only their role's tools; a suspended staff member is signed out everywhere. | Must |
+| FR-028 | FT-072, FT-073, FT-074, FT-099, FT-100 | Admins manage staff accounts and roles; staff sign in with a phone number or email and a one-time code, and sign out; HR keeps staff records. | Each staff member signs in with a code and sees only their role's tools; signing out ends the session on that device; a suspended staff member is signed out everywhere. | Must |
 | FR-029 | FT-075, FT-076 | Every staff and partner write is audited. | An admin can see who changed what and when, filtered by person, record or date. | Must |
 | FR-030 | FT-077 | Admins create promo codes. | A promo code applies at checkout within its rules. | Could |
 | FR-031 | FT-078, FT-079, FT-081 | Finance reconciles payments and approves vendor and driver payouts. | Each `PAYOUT_CYCLE` (default weekly) produces a payout batch net of commission; approved transfers are sent and failures listed; unmatched payments are flagged. | Must |
@@ -63,6 +64,8 @@ The Features column lists the FEATURES.md features (FT-) each requirement covers
 | FR-033 | FT-083, FT-084, FT-085, FT-086, FT-088, FT-089, FT-090, FT-091 | E-commerce partners book, follow and cancel deliveries through a documented API with webhooks. | With a live key, a partner gets a quote, books a delivery that is dispatched to the nearest driver, and receives signed webhook events, retried for `WEBHOOK_RETRY_HOURS` (default 24). | Should |
 | FR-034 | FT-087 | Partners place orders from RaveConnect stores for their customers. | The order is sourced and delivered like a customer order. | Could |
 | FR-035 | FT-092, FT-093, FT-094, FT-095, FT-096 | Customers and staff let AI agents act for them through MCP, within granted scopes. | An agent can search, track and triage within its scopes; it places an order only after the customer confirms it, and staff changes still need a person. | Could |
+| FR-036 | FT-101 | Customers can also sign in with a social account linked to their verified phone number. Other users can't. | Signing in with a linked social account opens the same account as the phone number. | Could |
+| FR-037 | FT-102 | Staff in the roles listed in setting `TWO_FACTOR_REQUIRED_ROLES` (default admin, finance) also confirm sign-in with an authenticator app. | Sign-in for those roles is refused without the second factor; other roles sign in with the code alone. | Could |
 
 ## Out of scope / stretch
 - Cash on delivery: deferred, pending a management decision (FEATURES.md, Gaps).
@@ -84,7 +87,8 @@ Resources (R-) in FEATURES.md are the main glossary terms; define them here once
 {{Budget, time, dependencies, domain/legal requirements}}
 
 ## Open decisions
-- Payment provider (e.g. Paystack, Flutterwave), SMS and one-time-code provider, and maps and routing provider. Owner: @bankole2000.
+- Payment provider (e.g. Paystack, Flutterwave), SMS and one-time-code provider, email provider (for email one-time codes), and maps and routing provider. Owner: @bankole2000.
+- Social sign-in providers for customers (e.g. Google, Apple; FR-036). Owner: @bankole2000.
 - Who sets each vendor's commission rate. Owner: @bankole2000.
 - Data protection under the Nigeria Data Protection Act (retention, consent, account deletion): needs `review:privacy`.
 
