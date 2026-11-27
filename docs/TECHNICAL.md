@@ -1,8 +1,8 @@
 # Technical Specification
 
-Status: Draft | Owner: @bankole2000 | Version: 0.4 | Last updated: 2026-11-27
+Status: Draft | Owner: @bankole2000 | Version: 0.5 | Last updated: 2026-11-27
 References: FEATURES.md, PRD.md, DESIGN.md
-<!-- review:focus ADR-008, "Identity and sessions", "users, sign_in_codes and sessions" -->
+<!-- review:focus "staff_members and staff_invitations", "Staff roles and permissions", "Email sign-in" -->
 
 ## Architecture overview
 Proposed (ADR-001 to ADR-007). All eight client apps use one Vue UI stack. The four web apps run in the browser. The four installed apps wrap the same kind of Vue UI in Tauri for Android, iOS and, for admin-app and vendor-app, desktop. Every client calls `api`, the only owner of the database. `partners-api` and `mcp-server` are thin Rust services. They authenticate their own callers (partner API keys, agent connections) and call `api` with service credentials, so business rules live in one place. `worker` runs the timed and background work: order acceptance timeouts, driver offers, notifications, payout calculation and partner webhooks. It takes jobs from a queue in PostgreSQL.
@@ -90,6 +90,7 @@ Start from the resources (R-) in FEATURES.md: each stored resource becomes an en
 api owns the database; other components go through its API. Migrations are in `apps/api/migrations/`.
 
 - **users, sign_in_codes and sessions** (R-30, ADR-008): `users` is one row per person (a verified phone number, unique, and `suspended_at`). Customer, driver, vendor and staff details will be separate tables pointing at it, so one number is one identity. `sign_in_codes` holds a hash of each one-time code, its attempts and expiry. `sessions` holds a SHA-256 hash of each session token, the device name, `last_seen_at` and `revoked_at`.
+- **staff_members and staff_invitations** (R-22): a staff member is a user with one role (support, operations, admin, hr, finance or management) and `suspended_at`. An invitation names a phone number or an email address, a role and an expiry (`STAFF_INVITATION_DAYS`, default 7); it is accepted when that number or address signs in. A new invitation replaces a pending one for the same destination. Users now have a phone number, an email address or both.
 - {{Other entities, fields, relationships, constraints and indexes, as they are added.}}
 
 ## API and integrations
@@ -139,7 +140,9 @@ Every server app has a contract package. List every consumer, including other se
 - Internal apps (e.g. admin, ops) are still public on the internet unless the network says otherwise; they rely on server-side authorization like any other client.
 - Server-to-server calls use service credentials scoped to what the caller needs, never a forwarded user token.
 - **Identity and sessions** (ADR-008): everyone signs in with a phone number and a one-time code. Limits are settings: `AUTH_CODE_TTL_SECONDS` (300), `AUTH_CODE_MAX_ATTEMPTS` (5), `AUTH_CODE_RESEND_SECONDS` (60), `AUTH_CODE_MAX_PER_HOUR` (5) and `AUTH_SESSION_IDLE_DAYS` (90). Requesting a code answers the same way whether or not the number has an account. Only hashes of codes and tokens are stored, and codes and tokens are never logged; phone numbers are logged masked.
-- {{Permissions, input validation, secrets storage, sensitive data, threat mitigations, retention}}
+- **Email sign-in:** codes go to an email address only when it belongs to a user or has a pending staff invitation, so email is never a way to sign up; the answer is the same either way.
+- **Staff roles and permissions:** each staff role has a fixed list of permissions (`apps/api/src/auth/roles.rs`), taken from the staff rows of the coverage matrix in FEATURES.md. Every staff endpoint checks its permission on the server; clients get the list from `GET /v1/me` only to show the right tools. Suspending a staff member (FT-073) revokes all their sessions and blocks sign-in until they are reinstated. The first admin of an environment is invited with the `invite-admin` command.
+- {{Input validation, secrets storage, sensitive data, threat mitigations, retention}}
 
 ## Technical decisions
 | ID | Decision | Rationale | Status |

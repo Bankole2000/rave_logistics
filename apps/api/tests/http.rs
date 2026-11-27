@@ -27,7 +27,7 @@ fn app(db: PgPool) -> Router {
     let state = AppState {
         db,
         auth: config.auth.clone(),
-        code_sender: std::sync::Arc::new(api::auth::sender::MemorySender::default()),
+        message_sender: std::sync::Arc::new(api::auth::sender::MemorySender::default()),
     };
     api::app(state, &config)
 }

@@ -3,7 +3,9 @@
 //! A session is a random bearer token held by the client; api stores only its hash, so a
 //! session can be revoked at once (sign-out, suspension) by updating one row.
 
+pub mod destination;
 pub mod phone;
+pub mod roles;
 pub mod secrets;
 pub mod sender;
 
@@ -13,7 +15,11 @@ use axum::{
 };
 use uuid::Uuid;
 
-use crate::{error::ApiError, state::AppState};
+use crate::{
+    auth::roles::{Permission, Role},
+    error::ApiError,
+    state::AppState,
+};
 
 /// The signed-in session of the request. Handlers that take it need a valid
 /// `Authorization: Bearer <token>` header; anything else is rejected with 401 `unauthorized`.
@@ -62,5 +68,49 @@ impl FromRequestParts<AppState> for CurrentSession {
             session_id,
             user_id,
         })
+    }
+}
+
+/// A signed-in staff member who isn't suspended. Anyone else is rejected: 401 `unauthorized`
+/// without a valid session, 403 `not_staff` with one. Check what the role may do with
+/// [`CurrentStaff::require`].
+#[derive(Debug, Clone, Copy)]
+pub struct CurrentStaff {
+    pub session: CurrentSession,
+    pub role: Role,
+}
+
+impl CurrentStaff {
+    /// 403 `forbidden` unless the role has `permission`.
+    pub fn require(&self, permission: Permission) -> Result<(), ApiError> {
+        if self.role.can(permission) {
+            Ok(())
+        } else {
+            Err(ApiError::Forbidden {
+                code: "forbidden",
+                message: "Your role can't do this.".to_owned(),
+            })
+        }
+    }
+}
+
+impl FromRequestParts<AppState> for CurrentStaff {
+    type Rejection = ApiError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, ApiError> {
+        let session = CurrentSession::from_request_parts(parts, state).await?;
+        let role: Option<(String,)> = sqlx::query_as(
+            "SELECT role FROM staff_members WHERE user_id = $1 AND suspended_at IS NULL",
+        )
+        .bind(session.user_id)
+        .fetch_optional(&state.db)
+        .await?;
+        let role =
+            role.and_then(|(r,)| Role::from_stored(&r))
+                .ok_or_else(|| ApiError::Forbidden {
+                    code: "not_staff",
+                    message: "This needs a staff account.".to_owned(),
+                })?;
+        Ok(Self { session, role })
     }
 }

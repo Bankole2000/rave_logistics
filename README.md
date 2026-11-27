@@ -131,6 +131,7 @@ Run from the repo root. First time: `docker compose up -d` (local PostgreSQL wit
 - Build: `cargo build -p api --release`
 - Migrations: run when api starts; manually `sqlx migrate run --source apps/api/migrations` (needs DATABASE_URL)
 - Contract: `cargo run -p api --bin openapi -- --out packages/api-contract/openapi.json` (add `--check` to verify it is up to date)
+- First admin: `cargo run -p api --bin invite-admin -- --phone <number>` (or `--email <address>`), then sign in with that number or address
 
 ### worker
 - Run locally: {{command}}

@@ -2,7 +2,7 @@ use anyhow::Context;
 use std::sync::Arc;
 
 use api::{
-    auth::sender::{CodeSender, ConsoleSender},
+    auth::sender::{ConsoleSender, MessageSender},
     config::{CodeSenderKind, Config},
     state::AppState,
 };
@@ -15,7 +15,7 @@ async fn main() -> anyhow::Result<()> {
     api::telemetry::init(config.log_format);
 
     // Checked before touching the database, so a misconfigured release fails without side effects.
-    let code_sender = code_sender(config.auth.code_sender)?;
+    let message_sender = message_sender(config.auth.code_sender)?;
     let db = api::connect_pool(&config)?;
     if config.migrate_on_start {
         api::MIGRATOR
@@ -27,7 +27,7 @@ async fn main() -> anyhow::Result<()> {
     let state = AppState {
         db,
         auth: config.auth.clone(),
-        code_sender,
+        message_sender,
     };
     let app = api::app(state, &config);
     let listener = TcpListener::bind(config.bind_addr)
@@ -40,11 +40,13 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// The configured code sender. The console sender prints codes, so release builds refuse it.
-fn code_sender(kind: CodeSenderKind) -> anyhow::Result<Arc<dyn CodeSender>> {
+/// The configured message sender. The console sender prints codes, so release builds refuse it.
+fn message_sender(kind: CodeSenderKind) -> anyhow::Result<Arc<dyn MessageSender>> {
     match kind {
         CodeSenderKind::Console if cfg!(debug_assertions) => {
-            tracing::warn!("AUTH_CODE_SENDER=console: sign-in codes are printed to stderr");
+            tracing::warn!(
+                "AUTH_CODE_SENDER=console: sign-in codes and invitations are printed to stderr"
+            );
             Ok(Arc::new(ConsoleSender))
         }
         CodeSenderKind::Console => anyhow::bail!(
