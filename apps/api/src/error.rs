@@ -9,7 +9,7 @@
 
 use axum::{
     Json,
-    extract::rejection::JsonRejection,
+    extract::rejection::{JsonRejection, PathRejection},
     http::{HeaderValue, StatusCode, header},
     response::{IntoResponse, Response},
 };
@@ -41,6 +41,9 @@ pub enum ApiError {
     Forbidden { code: &'static str, message: String },
     #[error("{0}")]
     NotFound(String),
+    /// The request conflicts with the current state, e.g. inviting someone who is already staff.
+    #[error("{message}")]
+    Conflict { code: &'static str, message: String },
     /// A rate limit was hit. Sent with `Retry-After` in seconds.
     #[error("{message}")]
     TooManyRequests {
@@ -61,6 +64,7 @@ impl ApiError {
             Self::Unauthorized(_) => (StatusCode::UNAUTHORIZED, "unauthorized"),
             Self::Forbidden { code, .. } => (StatusCode::FORBIDDEN, code),
             Self::NotFound(_) => (StatusCode::NOT_FOUND, "not_found"),
+            Self::Conflict { code, .. } => (StatusCode::CONFLICT, code),
             Self::TooManyRequests { .. } => (StatusCode::TOO_MANY_REQUESTS, "too_many_requests"),
             Self::ServiceUnavailable(_) => (StatusCode::SERVICE_UNAVAILABLE, "service_unavailable"),
             Self::Internal(_) => (StatusCode::INTERNAL_SERVER_ERROR, "internal_error"),
@@ -72,6 +76,15 @@ impl From<JsonRejection> for ApiError {
     fn from(rejection: JsonRejection) -> Self {
         Self::BadRequest {
             code: "invalid_body",
+            message: rejection.body_text(),
+        }
+    }
+}
+
+impl From<PathRejection> for ApiError {
+    fn from(rejection: PathRejection) -> Self {
+        Self::BadRequest {
+            code: "invalid_path",
             message: rejection.body_text(),
         }
     }

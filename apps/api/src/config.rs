@@ -25,11 +25,11 @@ impl FromStr for LogFormat {
     }
 }
 
-/// Where one-time sign-in codes go. Only `console` exists until an SMS provider is chosen
-/// (PRD, open decisions).
+/// Where one-time codes and staff invitations go. Only `console` exists until the SMS and email
+/// providers are chosen (PRD, open decisions).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CodeSenderKind {
-    /// Prints codes to api's standard error. Local development only; refused in release builds.
+    /// Prints messages to api's standard error. Local development only; refused in release builds.
     Console,
 }
 
@@ -58,6 +58,8 @@ pub struct AuthConfig {
     pub code_max_per_hour: i64,
     /// A session unused for this long is signed out.
     pub session_idle_days: i32,
+    /// How long a staff invitation can be accepted.
+    pub invitation_days: i32,
 }
 
 #[derive(Debug, Clone)]
@@ -106,6 +108,7 @@ impl Config {
                 code_resend_secs: number(&get, "AUTH_CODE_RESEND_SECONDS", 60)?,
                 code_max_per_hour: number(&get, "AUTH_CODE_MAX_PER_HOUR", 5)?,
                 session_idle_days: number(&get, "AUTH_SESSION_IDLE_DAYS", 90)?,
+                invitation_days: number(&get, "STAFF_INVITATION_DAYS", 7)?,
             },
         })
     }
@@ -186,6 +189,7 @@ mod tests {
         assert_eq!(config.auth.code_resend_secs, 60);
         assert_eq!(config.auth.code_max_per_hour, 5);
         assert_eq!(config.auth.session_idle_days, 90);
+        assert_eq!(config.auth.invitation_days, 7);
     }
 
     #[test]

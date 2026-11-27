@@ -1,120 +1,12 @@
 //! Sign-in with a phone number and a one-time code, sessions and sign-out, against a real
 //! database (`docker compose up -d`). Codes go to an in-memory sender instead of SMS.
 
-use std::sync::Arc;
+mod common;
 
-use api::{auth::sender::MemorySender, config::Config, state::AppState};
-use axum::{
-    Router,
-    body::Body,
-    http::{HeaderMap, Method, Request, StatusCode, header},
-};
-use http_body_util::BodyExt;
-use serde_json::{Value, json};
+use axum::http::{Method, StatusCode, header};
+use common::{E164, PHONE, TestApp};
+use serde_json::json;
 use sqlx::PgPool;
-use tower::ServiceExt;
-
-const PHONE: &str = "0803 123 4567";
-const E164: &str = "+2348031234567";
-
-struct TestApp {
-    router: Router,
-    sender: Arc<MemorySender>,
-    db: PgPool,
-}
-
-impl TestApp {
-    /// The app with default settings, except those in `overrides`.
-    fn new(db: PgPool, overrides: &[(&str, &str)]) -> Self {
-        let config = Config::from_lookup(|key| match key {
-            "DATABASE_URL" => Some("postgres://unused".to_owned()),
-            _ => overrides
-                .iter()
-                .find(|(k, _)| *k == key)
-                .map(|(_, v)| (*v).to_owned()),
-        })
-        .unwrap();
-        let sender = Arc::new(MemorySender::default());
-        let state = AppState {
-            db: db.clone(),
-            auth: config.auth.clone(),
-            code_sender: sender.clone(),
-        };
-        Self {
-            router: api::app(state, &config),
-            sender,
-            db,
-        }
-    }
-
-    async fn call(
-        &self,
-        method: Method,
-        uri: &str,
-        token: Option<&str>,
-        body: Option<Value>,
-    ) -> (StatusCode, HeaderMap, Value) {
-        let mut req = Request::builder().method(method).uri(uri);
-        if let Some(token) = token {
-            req = req.header(header::AUTHORIZATION, format!("Bearer {token}"));
-        }
-        let req = match body {
-            Some(body) => req
-                .header(header::CONTENT_TYPE, "application/json")
-                .body(Body::from(body.to_string())),
-            None => req.body(Body::empty()),
-        }
-        .unwrap();
-        let res = self.router.clone().oneshot(req).await.unwrap();
-        let (status, headers) = (res.status(), res.headers().clone());
-        let bytes = res.into_body().collect().await.unwrap().to_bytes();
-        let body = if bytes.is_empty() {
-            Value::Null
-        } else {
-            serde_json::from_slice(&bytes).unwrap()
-        };
-        (status, headers, body)
-    }
-
-    async fn request_code(&self, phone: &str) -> (StatusCode, HeaderMap, Value) {
-        self.call(
-            Method::POST,
-            "/v1/auth/codes",
-            None,
-            Some(json!({ "phone": phone })),
-        )
-        .await
-    }
-
-    async fn verify(&self, code_id: &Value, code: &str) -> (StatusCode, Value) {
-        let (status, _, body) = self
-            .call(
-                Method::POST,
-                "/v1/auth/sessions",
-                None,
-                Some(json!({ "code_id": code_id, "code": code, "device_name": "Test phone" })),
-            )
-            .await;
-        (status, body)
-    }
-
-    /// Requests a code and enters it; returns the sign-in response.
-    async fn sign_in(&self, phone: &str) -> Value {
-        let (status, _, sent) = self.request_code(phone).await;
-        assert_eq!(status, StatusCode::ACCEPTED, "{sent}");
-        let code = self
-            .sender
-            .last_code(sent["phone"].as_str().unwrap())
-            .unwrap();
-        let (status, body) = self.verify(&sent["code_id"], &code).await;
-        assert_eq!(status, StatusCode::OK, "{body}");
-        body
-    }
-
-    async fn me(&self, token: &str) -> (StatusCode, HeaderMap, Value) {
-        self.call(Method::GET, "/v1/me", Some(token), None).await
-    }
-}
 
 /// A code that differs from `code`.
 fn wrong(code: &str) -> String {

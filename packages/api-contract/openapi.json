@@ -46,8 +46,8 @@
         "tags": [
           "auth"
         ],
-        "summary": "Sends a one-time sign-in code to a phone number.",
-        "description": "The response is the same whether or not the number has an account.",
+        "summary": "Sends a one-time sign-in code to a phone number or an email address.",
+        "description": "The response is the same whether or not the number or address has an account.",
         "operationId": "request_code",
         "requestBody": {
           "content": {
@@ -71,7 +71,7 @@
             }
           },
           "400": {
-            "description": "`invalid_phone` or `invalid_body`",
+            "description": "`invalid_phone`, `invalid_email` or `invalid_body`",
             "content": {
               "application/json": {
                 "schema": {
@@ -107,7 +107,7 @@
         "tags": [
           "auth"
         ],
-        "summary": "Checks a one-time code and signs in, creating the account on first sign-in.",
+        "summary": "Checks a one-time code and signs in, creating the account on the first sign-in by phone, or\nby email with a pending staff invitation. A pending staff invitation for the verified phone\nnumber or email address is accepted (FT-072).",
         "operationId": "sign_in",
         "requestBody": {
           "content": {
@@ -158,7 +158,7 @@
         "tags": [
           "auth"
         ],
-        "summary": "Signs out this device: its session stops working at once (FT-005).",
+        "summary": "Signs out this device: its session stops working at once (FT-005, FT-100).",
         "operationId": "sign_out",
         "responses": {
           "204": {
@@ -217,18 +217,329 @@
           }
         ]
       }
+    },
+    "/v1/staff": {
+      "get": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "Lists staff members, newest first.",
+        "operationId": "list_staff",
+        "responses": {
+          "200": {
+            "description": "Staff members",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StaffMember"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`unauthorized`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_staff` or `forbidden` (needs `staff.view`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/v1/staff/invitations": {
+      "get": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "Lists pending invitations, newest first.",
+        "operationId": "list_invitations",
+        "responses": {
+          "200": {
+            "description": "Pending invitations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Invitation"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`unauthorized`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_staff` or `forbidden` (needs `staff.create`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "Invites someone to join as staff with a role (FT-072). They accept by signing in with the\ninvited phone number or email address before the invitation expires.",
+        "operationId": "invite",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Invitation sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Invitation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalid_phone`, `invalid_email` or `invalid_body`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`unauthorized`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_staff` or `forbidden` (needs `staff.create`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`already_staff`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/v1/staff/{user_id}/suspension": {
+      "post": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "Suspends a staff member: every session of theirs ends at once and they can't sign in (FT-073).",
+        "operationId": "suspend",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "The staff member's user ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Suspended (also when already suspended)"
+          },
+          "400": {
+            "description": "`cannot_suspend_self`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`unauthorized`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_staff` or `forbidden` (needs `staff.suspend`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found`: no such staff member",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "staff"
+        ],
+        "summary": "Lifts a suspension; the staff member can sign in again.",
+        "operationId": "reinstate",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "description": "The staff member's user ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Reinstated (also when not suspended)"
+          },
+          "401": {
+            "description": "`unauthorized`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_staff` or `forbidden` (needs `staff.suspend`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found`: no such staff member",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
     }
   },
   "components": {
     "schemas": {
       "CodeRequest": {
         "type": "object",
-        "required": [
-          "phone"
-        ],
+        "description": "Send `phone` or `email`, not both.",
         "properties": {
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "For staff and vendor owners whose account or invitation has this email address.",
+            "example": "ada@example.com"
+          },
           "phone": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "A Nigerian mobile number in any common format.",
             "example": "0803 123 4567"
           }
@@ -238,7 +549,6 @@
         "type": "object",
         "required": [
           "code_id",
-          "phone",
           "expires_in_seconds",
           "resend_after_seconds"
         ],
@@ -248,19 +558,29 @@
             "format": "uuid",
             "description": "Send this back with the code."
           },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The address the code was sent to, lower-cased, when signing in by email."
+          },
           "expires_in_seconds": {
             "type": "integer",
             "format": "int64"
           },
           "phone": {
-            "type": "string",
-            "description": "The number the code was sent to, in E.164 form.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The number the code was sent to, in E.164 form, when signing in by phone.",
             "example": "+2348031234567"
           },
           "resend_after_seconds": {
             "type": "integer",
             "format": "int64",
-            "description": "When another code can be requested for this number."
+            "description": "When another code can be requested for this number or address."
           }
         }
       },
@@ -315,6 +635,121 @@
           }
         }
       },
+      "Invitation": {
+        "type": "object",
+        "required": [
+          "id",
+          "role",
+          "created_at",
+          "expires_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "invited_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The admin who sent it; empty for the first admin's invitation."
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          }
+        }
+      },
+      "InvitationRequest": {
+        "type": "object",
+        "description": "Invite by `phone` or `email`, not both.",
+        "required": [
+          "role"
+        ],
+        "properties": {
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "ada@example.com"
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "0803 123 4567"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          }
+        }
+      },
+      "Permission": {
+        "type": "string",
+        "description": "Something a staff role may do, named `<resource>.<action>`.",
+        "enum": [
+          "audit.view",
+          "deliveries.assign",
+          "deliveries.track",
+          "drivers.approve",
+          "drivers.decline",
+          "drivers.suspend",
+          "messages.create",
+          "orders.cancel",
+          "orders.search",
+          "partners.create",
+          "payments.refund",
+          "payments.view",
+          "payouts.approve",
+          "promotions.create",
+          "reports.export",
+          "reports.view",
+          "staff.create",
+          "staff.edit",
+          "staff.suspend",
+          "staff.view",
+          "stores.suspend",
+          "tickets.edit",
+          "vendors.approve",
+          "zones.create",
+          "zones.edit"
+        ]
+      },
+      "Role": {
+        "type": "string",
+        "description": "An internal staff role (R-22; users U-06 to U-11).",
+        "enum": [
+          "support",
+          "operations",
+          "admin",
+          "hr",
+          "finance",
+          "management"
+        ]
+      },
       "SignedIn": {
         "type": "object",
         "required": [
@@ -341,6 +776,71 @@
           }
         }
       },
+      "StaffAccess": {
+        "type": "object",
+        "required": [
+          "role",
+          "permissions",
+          "suspended"
+        ],
+        "properties": {
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Permission"
+            },
+            "description": "What the role may do. The server checks these on every request."
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "suspended": {
+            "type": "boolean",
+            "description": "A suspended staff member can't sign in (FT-073)."
+          }
+        }
+      },
+      "StaffMember": {
+        "type": "object",
+        "required": [
+          "user_id",
+          "role",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "suspended_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When the staff member was suspended; empty if active."
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "Status": {
         "type": "string",
         "enum": [
@@ -352,7 +852,6 @@
         "type": "object",
         "required": [
           "id",
-          "phone",
           "created_at"
         ],
         "properties": {
@@ -360,14 +859,35 @@
             "type": "string",
             "format": "date-time"
           },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Verified email address, lower-cased."
+          },
           "id": {
             "type": "string",
             "format": "uuid"
           },
           "phone": {
-            "type": "string",
-            "description": "Verified phone number, E.164.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Verified phone number, E.164. A user has a phone number, an email address, or both.",
             "example": "+2348031234567"
+          },
+          "staff": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/StaffAccess",
+                "description": "Present when the user is an internal staff member."
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },
@@ -411,7 +931,11 @@
     },
     {
       "name": "auth",
-      "description": "Sign-in with a phone number and a one-time code, sessions and sign-out"
+      "description": "Sign-in with a one-time code by phone or email, sessions and sign-out"
+    },
+    {
+      "name": "staff",
+      "description": "Staff invitations, roles and suspension (admins)"
     }
   ]
 }

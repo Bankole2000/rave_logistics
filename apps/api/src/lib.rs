@@ -41,7 +41,8 @@ pub const REQUEST_ID_HEADER: HeaderName = HeaderName::from_static("x-request-id"
     modifiers(&SessionAuth),
     tags(
         (name = "health", description = "Service health"),
-        (name = "auth", description = "Sign-in with a phone number and a one-time code, sessions and sign-out"),
+        (name = "auth", description = "Sign-in with a one-time code by phone or email, sessions and sign-out"),
+        (name = "staff", description = "Staff invitations, roles and suspension (admins)"),
     ),
 )]
 struct ApiDoc;
@@ -72,6 +73,12 @@ fn api_router() -> OpenApiRouter<AppState> {
         .routes(routes!(routes::auth::sign_in))
         .routes(routes!(routes::auth::sign_out))
         .routes(routes!(routes::me::me))
+        .routes(routes!(
+            routes::staff::invite,
+            routes::staff::list_invitations
+        ))
+        .routes(routes!(routes::staff::list_staff))
+        .routes(routes!(routes::staff::suspend, routes::staff::reinstate))
 }
 
 /// The OpenAPI document for api (written to packages/api-contract by the `openapi` binary).
