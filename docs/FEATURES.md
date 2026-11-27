@@ -1,6 +1,6 @@
 # Features
 
-Status: Draft | Owner: @bankole2000 | Version: 0.3 | Last updated: 2026-11-26
+Status: Draft | Owner: @bankole2000 | Version: 0.4 | Last updated: 2026-11-26
 References: PRD.md (requirements FR-), ROADMAP.md (milestones)
 <!-- review:ignore-columns Requirements, Milestone, Status -->
 
@@ -140,18 +140,18 @@ A journey is what one user does to reach a goal, as features in order. The Miles
 
 | ID | Name | Main user | Goal | Features, in order | Milestone |
 |---|---|---|---|---|---|
-| J-01 | Get started as a customer | U-01 | Have an account and a delivery address | FT-001, FT-002, FT-003, FT-004, FT-005, FT-097 | M2 |
+| J-01 | Get started as a customer | U-01 | Have an account and a delivery address | FT-001, FT-002, FT-003, FT-004, FT-005, FT-097, FT-101 | M2 |
 | J-02 | Order from a nearby store | U-01 | Place and pay for an order fulfilled by the nearest store | FT-006, FT-007, FT-008, FT-009, FT-010, FT-011, FT-012, FT-013, FT-014, FT-015, FT-016, FT-017, FT-018 | M2 |
 | J-03 | Receive an order | U-01 | Follow the order and get it delivered | FT-019, FT-020, FT-021, FT-022, FT-023, FT-024 | M2 |
 | J-04 | Get help with an order | U-01 | Have a problem resolved or money refunded | FT-025, FT-026, FT-027 | M3 |
-| J-05 | Join as a vendor | U-04 | Have an approved business with a live store | FT-028, FT-029, FT-030, FT-031, FT-032 | M1 |
+| J-05 | Join as a vendor | U-04 | Have an approved business with a live store | FT-028, FT-029, FT-030, FT-031, FT-032, FT-098 | M1 |
 | J-06 | Manage the catalogue | U-04 | Customers see the right products, prices and stock | FT-033, FT-034, FT-035, FT-036, FT-037, FT-038 | M1 |
 | J-07 | Fulfil an order as a vendor | U-05 | Prepare orders and hand them to drivers | FT-039, FT-040, FT-041, FT-042, FT-043, FT-044 | M2 |
 | J-08 | Join as a driver | U-03 | Be approved to take deliveries | FT-045, FT-046, FT-047, FT-048 | M1 |
 | J-09 | Deliver an order | U-03 | Pick up and deliver orders | FT-049, FT-050, FT-051, FT-052, FT-053, FT-054, FT-055, FT-056, FT-057 | M2 |
 | J-10 | Get paid as a driver | U-03 | See and withdraw earnings | FT-058, FT-059 | M3 |
 | J-11 | Run daily operations | U-07 | Keep every order moving and every complaint answered | FT-060, FT-061, FT-062, FT-063, FT-064, FT-065, FT-066, FT-067, FT-068, FT-069 | M3 |
-| J-12 | Configure the platform | U-08 | Zones, pricing and staff are set up | FT-070, FT-071, FT-072, FT-073, FT-074, FT-075, FT-076, FT-077 | M1 |
+| J-12 | Configure the platform | U-08 | Zones, pricing and staff are set up | FT-070, FT-071, FT-072, FT-073, FT-074, FT-075, FT-076, FT-077, FT-099, FT-100, FT-102 | M1 |
 | J-13 | Pay out vendors and drivers | U-10 | Everyone is paid correctly and on time | FT-078, FT-079, FT-080, FT-081 | M3 |
 | J-14 | Review performance | U-11 | Know how the business is doing | FT-082 | M3 |
 | J-15 | Integrate as a partner | U-12 | Book and follow deliveries automatically | FT-083, FT-084, FT-085, FT-086, FT-087, FT-088, FT-089, FT-090, FT-091 | M4 |
@@ -257,6 +257,11 @@ A journey is what one user does to reach a goal, as features in order. The Miles
 | FT-095 | U-13 AI agent | A-02 views | R-08 Order | for a staff member who connected it; within their role | S-16 | Agent lists stuck or late orders for triage; changes still need a person. | Could | FT-096, FT-062 | J-16 | FR-035 | approved |
 | FT-096 | U-01 Customer | A-01 creates | R-31 Agent connection | own account; chosen scopes and expiry | S-01, S-02 | Agent can act within the scopes until the connection expires or is revoked. | Could | FT-002 | J-16 | FR-035 | approved |
 | FT-097 | U-01 Customer | A-05 removes | R-01 Customer account | own account | S-01, S-02 | Account and personal data are deleted, except records the law requires keeping. | Must | FT-001 | J-01 | FR-003 | approved |
+| FT-098 | U-04 Vendor owner | A-08 signs in | R-30 Session | own business; phone number or email | S-08, S-10 | Signed in with phone number or email and a one-time code; stays signed in on that device. | Must | FT-028 | J-05 | — (new) | proposed |
+| FT-099 | U-06 Support agent | A-08 signs in | R-30 Session | every staff role (support, operations, admin, HR, finance, management); phone number or email from the invitation | S-11, S-13 | Signed in with phone number or email and a one-time code, and sees only the tools of their role. | Must | FT-072 | J-12 | — (new) | proposed |
+| FT-100 | U-06 Support agent | A-09 signs out | R-30 Session | own sessions; every staff role | S-11, S-13 | Device is signed out and needs a new code to sign in. | Must | FT-099 | J-12 | — (new) | proposed |
+| FT-101 | U-01 Customer | A-08 signs in | R-30 Session | own account; social sign-in (providers TBD, see Gaps); customers only | S-01, S-02 | Signed in with a social account linked to the customer's verified phone number. | Could | FT-001 | J-01 | — (new) | proposed |
+| FT-102 | U-14 System | A-10 rejects | R-30 Session | staff roles listed in setting `TWO_FACTOR_REQUIRED_ROLES` (default: admin, finance) without a second factor | S-11, S-13 | Staff in those roles must also confirm sign-in with an authenticator app; sign-in without it is refused. | Could | FT-099 | J-12 | — (new) | proposed |
 
 ## Coverage matrix
 Generated from the Features table (approved and proposed features only); don't edit it by hand. Each cell lists the actions a user can take on a resource. An empty cell is not an error, but it is worth a look: who can change or remove this resource?
@@ -267,9 +272,9 @@ Generated from the Features table (approved and proposed features only); don't e
 | U-01 Customer | signs up, removes | creates, edits |  | views, filters | searches, views |  | edits | places, cancels, views | tracks |  |  | pays | views | rates | creates | creates |  |  |  |  |  |  |  |  |  |  |  |  |  | signs in, signs out | creates |
 | U-02 Recipient |  |  |  |  |  |  |  |  | tracks |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
 | U-03 Driver |  |  |  |  |  |  |  |  | accepts, declines, picks up, delivers, edits, views | records | signs up, edits |  |  |  |  |  |  | views | creates |  |  |  |  |  |  |  |  |  |  | signs in |  |
-| U-04 Vendor owner |  |  | signs up | creates | creates, edits, archives |  |  |  |  |  |  |  |  |  |  |  |  | views |  |  |  |  | creates |  |  |  |  |  |  |  |  |
+| U-04 Vendor owner |  |  | signs up | creates | creates, edits, archives |  |  |  |  |  |  |  |  |  |  |  |  | views |  |  |  |  | creates |  |  |  |  |  |  | signs in |  |
 | U-05 Vendor staff |  |  |  | edits |  | edits |  | views, accepts, declines, edits |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | signs in |  |
-| U-06 Support agent |  |  | approves |  |  |  |  | searches, cancels |  |  | approves, declines |  | refunds |  | edits | creates |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| U-06 Support agent |  |  | approves |  |  |  |  | searches, cancels |  |  | approves, declines |  | refunds |  | edits | creates |  |  |  |  |  |  |  |  |  |  |  |  |  | signs in, signs out |  |
 | U-07 Operations manager |  |  |  | suspends |  |  |  |  | tracks, assigns |  | suspends |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
 | U-08 Admin |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | creates, edits | creates, suspends |  | creates |  |  |  | views | creates |  |  |
 | U-09 HR officer |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | edits |  |  |  |  |  |  |  |  |  |
@@ -277,7 +282,7 @@ Generated from the Features table (approved and proposed features only); don't e
 | U-11 Management |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | views |  |  |  |  |
 | U-12 Partner app |  |  |  |  |  |  |  | places | creates, cancels, tracks |  |  |  |  |  |  |  |  |  |  | views |  |  |  |  | creates |  |  |  |  |  |  |
 | U-13 AI agent |  |  |  |  | searches |  |  | places, views | tracks |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| U-14 System |  |  |  |  |  |  |  | sources, rejects | assigns |  |  |  |  |  |  |  | notifies |  | calculates | calculates |  |  |  |  |  |  |  | records |  |  |  |
+| U-14 System |  |  |  |  |  |  |  | sources, rejects | assigns |  |  |  |  |  |  |  | notifies |  | calculates | calculates |  |  |  |  |  |  |  | records |  | rejects |  |
 | U-15 Payment provider |  |  |  |  |  |  |  |  |  |  |  | records |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
 | U-16 Partner developer |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | views |  |  |  |  |  |
 <!-- matrix:end -->
@@ -291,6 +296,7 @@ Questions found while building the lists that the features don't answer yet. Eac
 - **Cash on delivery:** not included. Deferred (2026-11-26): management decision.
 - **Multi-store orders:** a cart holds items from one store only, and each order comes from one store (confirmed by the owner, 2026-11-26).
 - **Parcel delivery for customers:** customers can't send a package of their own from A to B. Only partners can (FT-086). Decide whether customers get this too.
+- **Sign-in methods** (owner, 2026-11-26): customers and drivers sign in with phone number and one-time code (FT-002, FT-048). Vendor owners, vendor staff and internal staff may use phone number or email with a one-time code (FT-098, FT-099). Social sign-in is for customers only (FT-101); which providers (e.g. Google, Apple) is an open decision. Two-factor sign-in for sensitive staff roles is a stretch goal (FT-102). An email one-time code needs an email provider, another open vendor choice.
 - **Scheduled orders, tips and vendor promotions:** not included.
 - **Vendor and driver support:** vendors and drivers can't open tickets themselves yet. Only customers can (FT-025).
 - **HR scope:** only staff records (FT-074) are covered. Payroll and leave are assumed to be outside the product.
