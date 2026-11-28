@@ -1,8 +1,8 @@
 # Product Requirements Document
 
-Status: Draft | Owner: @bankole2000 | Version: 0.3 | Last updated: 2026-11-27
+Status: Draft | Owner: @bankole2000 | Version: 0.4 | Last updated: 2026-11-28
 References: FEATURES.md (users U-, resources R-, surfaces S-, journeys J-, features FT-)
-<!-- review:focus FR-015, FR-028, FR-036, FR-037 -->
+<!-- review:focus FR-015, FR-028, FR-036, FR-037, "Who sets each vendor's commission rate", "console stand-ins" -->
 
 FEATURES.md feeds this document. When features are approved or changed there, the requirements below are updated to match, and each requirement lists the features it covers.
 
@@ -87,9 +87,9 @@ Resources (R-) in FEATURES.md are the main glossary terms; define them here once
 {{Budget, time, dependencies, domain/legal requirements}}
 
 ## Open decisions
-- Payment provider (e.g. Paystack, Flutterwave), SMS and one-time-code provider, email provider (for email one-time codes), and maps and routing provider. Owner: @bankole2000.
+- Payment provider (e.g. Paystack, Flutterwave), SMS and one-time-code provider, email provider (for email one-time codes), and maps and routing provider. Owner: @bankole2000. Until they are chosen, SMS, email and payments use console stand-ins that log what would be sent or charged (owner, 2026-11-28; TECHNICAL.md, Security and privacy), so development doesn't wait for them; a release needs the real providers.
 - Social sign-in providers for customers (e.g. Google, Apple; FR-036). Owner: @bankole2000.
-- Who sets each vendor's commission rate. Owner: @bankole2000.
+- Who sets each vendor's commission rate: deferred (owner, 2026-11-28). Until it is decided, commission is a setting per zone and per vendor (FEATURES.md, Gaps), and features that change a vendor's rate wait for this decision. Owner: @bankole2000.
 - Data protection under the Nigeria Data Protection Act (retention, consent, account deletion): needs `review:privacy`.
 
 ## Approval
