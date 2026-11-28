@@ -1,6 +1,6 @@
 # Development Roadmap
 
-Status: Draft | Owner: @bankole2000 | Version: 0.3 | Last updated: 2026-11-26
+Status: Approved | Owner: @bankole2000 | Version: 0.4 | Last updated: 2026-11-28
 References: FEATURES.md, PRD.md, DESIGN.md, TECHNICAL.md, TESTING.md
 
 ## Milestones
@@ -50,4 +50,4 @@ Every project with a client and a server needs these in M0; drop the ones that d
 - Reconcile scope changes with FEATURES.md and the approved PRD before generating new tasks.
 
 ## Approval
-{{Human approver, revision, date}}
+Revision 0.4 approved by Bankole on 2026-11-28 (docs/reviews/2026-11-28-ROADMAP.md).

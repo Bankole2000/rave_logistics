@@ -1,6 +1,6 @@
 # Features
 
-Status: Approved | Owner: @bankole2000 | Version: 0.5 | Last updated: 2026-11-27
+Status: Approved | Owner: @bankole2000 | Version: 0.6 | Last updated: 2026-11-28
 References: PRD.md (requirements FR-), ROADMAP.md (milestones)
 <!-- review:ignore-columns Requirements, Milestone, Status -->
 
@@ -308,3 +308,4 @@ Requirements that are not user + action + resource stay in the PRD: quality targ
 
 ## Approval
 Revision 0.5 approved by Bankole on 2026-11-27 (docs/reviews/2026-11-27-FEATURES.md).
+Revision 0.6 approved by Bankole on 2026-11-28 (docs/reviews/2026-11-28-FEATURES.md); no changes to its content since 0.5.
